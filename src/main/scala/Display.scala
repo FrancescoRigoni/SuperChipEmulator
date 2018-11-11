@@ -3,7 +3,7 @@ import java.awt.Color
 import java.awt.Graphics
 
 object Display {
-  val PIXEL_SCALE = 8
+  val PIXEL_SCALE = 16
   val BACKGROUND_COLOR = Color.BLACK
 }
 

@@ -1,4 +1,23 @@
+import java.nio.ByteBuffer
+import scala.language.implicitConversions
 
+object Implicits {
+  implicit def intToShort(i: Int): Short = {
+    val highByte: Byte = ((i & 0xFF00) >> 8).toByte
+    val lowByte: Byte = (i & 0xFF).toByte
+    ByteBuffer.wrap(Array[Byte](highByte, lowByte)).getShort
+  }
+
+  implicit def intToByte(i: Int): Byte = {
+    val lowByte: Byte = (i & 0xFF).toByte
+    ByteBuffer.wrap(Array[Byte](0x00, lowByte)).get(1)
+  }
+
+  implicit def shortToByte(i: Short): Byte = {
+    val lowByte: Byte = (i & 0xFF).toByte
+    ByteBuffer.wrap(Array[Byte](0x00, lowByte)).get(1)
+  }
+}
 
 object Main extends App {
   val programName = "demo.ch8"
@@ -42,5 +61,4 @@ object Main extends App {
       countUntilDecrement = 12
     }
   }
-
 }

@@ -1,6 +1,5 @@
 import java.nio.ByteBuffer
-
-import jdk.jfr.Unsigned
+import Implicits._
 
 object MemoryTest {
   def test(memory:Memory): Boolean = {
@@ -27,7 +26,7 @@ class Memory {
   private val POINTER_INVALID:Short = 4096
   private val ram = Array.ofDim[Byte](POINTER_INVALID)
   val video = Array.ofDim[Boolean](Memory.VIDEO_WIDTH * Memory.VIDEO_HEIGHT)
-  private var storingPointer:Int = POINTER_INVALID
+  private var storingPointer:Short = POINTER_INVALID
 
   def ramStartStoring(from:Short) : Unit = {
     storingPointer = from
@@ -58,43 +57,37 @@ class Memory {
     }
   }
 
-  def showSprite(size:Int, fromAddress: Int, xCoord: Byte, yCoord: Byte) : Boolean = {
+  def showSprite(height:Int, fromAddress: Int, xCoord: Byte, yCoord: Byte) : Boolean = {
     var collisions = 0
     var sourceAddress = fromAddress
 
-    println("ShowSprite at " + xCoord + ":" + yCoord + " height: " + size)
+    if (xCoord < 0 || yCoord < 0) {
+      return false
+    }
 
-    for (y <- yCoord until yCoord + size) {
-      val wrappedY = Math.abs(y % Memory.VIDEO_HEIGHT)
-      val wrappedX = Math.abs(xCoord % Memory.VIDEO_WIDTH)
+    if (xCoord >= Memory.VIDEO_WIDTH || yCoord >= Memory.VIDEO_HEIGHT) {
+      return false
+    }
 
-      var destinationAddress = wrappedY * Memory.VIDEO_WIDTH + wrappedX + 7
+    for (y <- yCoord until yCoord + height) {
+      val positiveY:Byte = y % Memory.VIDEO_HEIGHT
 
-      var pixelRow = ramReadByte(sourceAddress.toShort)
-      for (_ <- 0 until 8) {
-        val isOn = (pixelRow & 1) == 1
-        if (isOn && video(destinationAddress)) collisions += 1
-        video(destinationAddress) ^= isOn
+      for (x <- xCoord until xCoord + 8) {
+        val positiveX:Byte = x % Memory.VIDEO_WIDTH
 
-        pixelRow = (pixelRow >>> 1).toByte
-        destinationAddress -= 1
+        val locationInVideoMemory:Int = (positiveY * Memory.VIDEO_WIDTH) + positiveX
+        val currentRow = ramReadByte(sourceAddress)
+        val currentPx = x - xCoord
+        val mask:Byte = 0x80 >> currentPx
+        val pixelShouldBeOn = (currentRow & mask) != 0
+        val current = video(locationInVideoMemory)
+        if (current && pixelShouldBeOn) collisions += 1
+        video(locationInVideoMemory) ^= pixelShouldBeOn
       }
+
       sourceAddress += 1
     }
-    dumpVideo()
-    collisions > 0
-  }
 
-  def dumpVideo() : Unit = {
-    for (y <- 0 until Memory.VIDEO_HEIGHT) {
-      for (x <- 0 until Memory.VIDEO_WIDTH) {
-        var absolutePosInVideoMemory = y * Memory.VIDEO_WIDTH + x
-          if (video(absolutePosInVideoMemory)) print("X")
-          else print(" ")
-      }
-      println("")
-    }
-    for (x <- 0 until Memory.VIDEO_WIDTH) print("-")
-    println("")
+    collisions > 0
   }
 }

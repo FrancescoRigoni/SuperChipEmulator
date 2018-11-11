@@ -1,4 +1,6 @@
 
+import Implicits._
+
 class Cpu(val memory: Memory) {
 
   private val regVX = Array.ofDim[Byte](16)
@@ -17,7 +19,7 @@ class Cpu(val memory: Memory) {
   private val randomIncrement = 78
 
   def decrementDelay : Unit = {
-    if (regDelay != 0) regDelay = (regDelay - 1).toByte
+    if (regDelay != 0) regDelay -= 1
   }
 
   private def pop : Short = {
@@ -30,46 +32,48 @@ class Cpu(val memory: Memory) {
     stack = value :: stack
   }
 
-  def fetch : Short = {
-    val value = memory.ramReadTwoBytes(regPC.toShort)
+  def fetch : Int = {
+    val value = memory.ramReadTwoBytes(regPC)
     regPC = regPC + 2
     value
   }
 
   private def getXandKK(instruction:Short) : (Byte, Byte) = {
-    val x: Byte = ((instruction & 0x0F00) >> 8).toByte
-    val kk: Byte = (instruction & 0x00FF).toByte
+    val x: Byte = (instruction & 0x0F00) >> 8
+    val kk: Byte = instruction & 0x00FF
     (x, kk)
   }
 
   private def getX(instruction:Short) : Byte = {
-    ((instruction & 0x0F00) >> 8).toByte
+    (instruction & 0x0F00) >> 8
   }
 
   private def getXandY(instruction:Short) : (Byte, Byte) = {
-    val x: Byte = ((instruction & 0x0F00) >> 8).toByte
-    val y: Byte = ((instruction & 0x00F0) >> 4).toByte
+    val x: Byte = (instruction & 0x0F00) >> 8
+    val y: Byte = (instruction & 0x00F0) >> 4
     (x, y)
   }
 
   private def getXYN(instruction:Short) : (Byte, Byte, Byte) = {
-    val x: Byte = ((instruction & 0x0F00) >> 8).toByte
-    val y: Byte = ((instruction & 0x00F0) >> 4).toByte
-    val n: Byte = (instruction & 0x000F).toByte
+    val x: Byte = (instruction & 0x0F00) >> 8
+    val y: Byte = (instruction & 0x00F0) >> 4
+    val n: Byte = instruction & 0x000F
     (x, y, n)
   }
 
   private def getNNN(instruction:Short) : Short = {
-    (instruction & 0x0FFF).toShort
+    instruction & 0x0FFF
   }
 
-  private def getRandom() : Byte = {
+  private def generateRandom() : Byte = {
     random = random + randomIncrement
-    random.toByte
+    random
   }
 
-  def execute(instr : Short) : Unit = {
-    val realPC = regPC - Memory.PROGRAM_START
+  def execute(instruction : Int) : Unit = {
+    val instr:Short = instruction
+    val realPC = regPC - 0x200
+
     instr match {
       case v if v == 0x00EE =>
         // Return from subroutine
@@ -111,12 +115,12 @@ class Cpu(val memory: Memory) {
       case v if (v & 0xF0FF) == 0xF01E =>
         // Set I = I + Vx
         val x = getX(v)
-        regI = (regI + regVX(x).toShort).toShort
+        regI = regI + regVX(x)
 
       case v if (v & 0xF0FF) == 0xF029 =>
         // Set I = location of sprite for digit Vx
         val x = getX(v)
-        regI = (regVX(x) * 5).toShort
+        regI = regVX(x) * 5
 
       case v if (v & 0xF0FF) == 0xF033 =>
         // Store BCD representation of Vx in memory locations I, I+1, and I+2
@@ -125,9 +129,9 @@ class Cpu(val memory: Memory) {
         val tenths = (regVX(x) % 100) / 10
         val units = (regVX(x) % 100) % 10
         memory.ramStartStoring(regI)
-        memory.ramStoreByte(hundreds.toByte)
-        memory.ramStoreByte(tenths.toByte)
-        memory.ramStoreByte(units.toByte)
+        memory.ramStoreByte(hundreds)
+        memory.ramStoreByte(tenths)
+        memory.ramStoreByte(units)
         memory.ramFinishStoring()
 
       case v if (v & 0xF0FF) == 0xF055 =>
@@ -136,19 +140,22 @@ class Cpu(val memory: Memory) {
         memory.ramStartStoring(regI)
         (0 to x).foreach { v => memory.ramStoreByte(regVX(v)) }
         memory.ramFinishStoring()
+        regI += x + 1
 
       case v if (v & 0xF0FF) == 0xF065 =>
         // Read registers V0 through Vx from memory starting at location I
         val x = getX(v)
-        (0 to x).foreach { v => regVX(v) = memory.ramReadByte((regI + v).toShort) }
+        (0 to x).foreach { v => regVX(v) = memory.ramReadByte(regI + v) }
+        regI += x + 1
 
       case v if (v & 0xF000) == 0x1000 =>
         // Jump to location nnn
-        regPC = getNNN(v)
+        val valu = getNNN(v)
+        regPC = valu
 
       case v if (v & 0xF000) == 0x2000 =>
         // Call subroutine at nnn.
-        push(regPC.toShort)
+        push(regPC)
         regPC = getNNN(v)
 
       case v if (v & 0xF000) == 0x3000 =>
@@ -174,7 +181,7 @@ class Cpu(val memory: Memory) {
       case v if (v & 0xF000) == 0x7000 =>
         // Set Vx = Vx + kk
         val (x, kk) = getXandKK(v)
-        regVX(x) = (regVX(x) + kk).toByte
+        regVX(x) = regVX(x) + kk
 
       case v if (v & 0xF00F) == 0x8000 =>
         // Set Vx = Vy
@@ -184,50 +191,50 @@ class Cpu(val memory: Memory) {
       case v if (v & 0xF00F) == 0x8001 =>
         // Set Vx = Vx OR Vy
         val (x, y) = getXandY(v)
-        regVX(x) = (regVX(x) | regVX(y)).toByte
+        regVX(x) = regVX(x) | regVX(y)
 
       case v if (v & 0xF00F) == 0x8002 =>
         // Set Vx = Vx AND Vy
         val (x, y) = getXandY(v)
-        regVX(x) = (regVX(x) & regVX(y)).toByte
+        regVX(x) = regVX(x) & regVX(y)
 
       case v if (v & 0xF00F) == 0x8003 =>
         // Set Vx = Vx XOR Vy
         val (x, y) = getXandY(v)
-        regVX(x) = (regVX(x) ^ regVX(y)).toByte
+        regVX(x) = regVX(x) ^ regVX(y)
 
       case v if (v & 0xF00F) == 0x8004 =>
         // Vx = Vx + Vy, set VF = carry
         val (x, y) = getXandY(v)
         val addition = regVX(x) + regVX(y)
-        regVX(x) = addition.toByte
+        regVX(x) = addition
         regVF = addition > 255
 
       case v if (v & 0xF00F) == 0x8005 =>
         // Set Vx = Vx - Vy, set VF = NOT borrow
         val (x, y) = getXandY(v)
         regVF = regVX(x) > regVX(y)
-        regVX(x) = (regVX(x) - regVX(y)).toByte
+        regVX(x) = regVX(x) - regVX(y)
 
       case v if (v & 0xF00F) == 0x8006 =>
         // Set Vx = Vx SHR 1
         val (x, _) = getXandY(v)
         regVF = (regVX(x) & 0x1) == 1
-        regVX(x) = (regVX(x) / 2).toByte
+        regVX(x) = regVX(x) / 2
 
       case v if (v & 0xF00F) == 0x8007 =>
         // Set Vx = Vy - Vx, set VF = NOT borrow
         val (x, y) = getXandY(v)
         regVF = regVX(y) > regVX(x)
-        regVX(x) = (regVX(y) - regVX(x)).toByte
+        regVX(x) = regVX(y) - regVX(x)
 
-      case v if (v & 0xF00F) == 0x8008 =>
+      case v if (v & 0xF00F) == 0x800E =>
         // Set Vx = Vx SHL 1
         val (x, _) = getXandY(v)
         regVF = (regVX(x) & 0x80) == 0x80
-        regVX(x) = (regVX(x) * 2).toByte
+        regVX(x) = regVX(x) * 2
 
-      case v if (v & 0xF00F) == 0x8009 =>
+      case v if (v & 0xF00F) == 0x9000 =>
         // Skip next instruction if Vx != Vy
         val (x, y) = getXandY(v)
         if (regVX(x) != regVX(y)) regPC += 2
@@ -243,17 +250,15 @@ class Cpu(val memory: Memory) {
       case v if (v & 0xF000) == 0xC000 =>
         // Set Vx = random byte AND kk
         val (x, kk) = getXandKK(v)
-        regVX(x) = (getRandom() & kk.toByte).toByte
+        regVX(x) = generateRandom() & kk
 
       case v if (v & 0xF000) == 0xD000 =>
         // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
         val (x, y, n) = getXYN(v)
         regVF = memory.showSprite(n, regI, regVX(x), regVX(y))
 
-      case _ => {
+      case _ =>
         println("Not implemented! " + instr)
-        //System.exit(1)
-      }
     }
   }
 }
