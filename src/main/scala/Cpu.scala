@@ -252,7 +252,7 @@ class Cpu(val memory: Memory) {
 
       case _ => {
         println("Not implemented! " + instr)
-        System.exit(1)
+        //System.exit(1)
       }
     }
   }

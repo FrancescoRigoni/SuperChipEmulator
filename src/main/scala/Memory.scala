@@ -1,5 +1,7 @@
 import java.nio.ByteBuffer
 
+import jdk.jfr.Unsigned
+
 object MemoryTest {
   def test(memory:Memory): Boolean = {
     memory.ramStartStoring(0)
@@ -24,7 +26,7 @@ object Memory {
 class Memory {
   private val POINTER_INVALID:Short = 4096
   private val ram = Array.ofDim[Byte](POINTER_INVALID)
-  private val video = Array.ofDim[Boolean](Memory.VIDEO_WIDTH * Memory.VIDEO_HEIGHT)
+  val video = Array.ofDim[Boolean](Memory.VIDEO_WIDTH * Memory.VIDEO_HEIGHT)
   private var storingPointer:Int = POINTER_INVALID
 
   def ramStartStoring(from:Short) : Unit = {
@@ -56,15 +58,20 @@ class Memory {
     }
   }
 
-  def showSprite(size:Int, fromAddress: Int, xCoord: Int, yCoord: Int) : Boolean = {
-    println("ShowSprite at " + xCoord + ":" + yCoord + " height: " + size)
+  def showSprite(size:Int, fromAddress: Int, xCoord: Byte, yCoord: Byte) : Boolean = {
     var collisions = 0
-    var sourceAddress = fromAddress;
+    var sourceAddress = fromAddress
+
+    println("ShowSprite at " + xCoord + ":" + yCoord + " height: " + size)
 
     for (y <- yCoord until yCoord + size) {
-      var destinationAddress = y * Memory.VIDEO_WIDTH + xCoord + 7
+      val wrappedY = Math.abs(y % Memory.VIDEO_HEIGHT)
+      val wrappedX = Math.abs(xCoord % Memory.VIDEO_WIDTH)
+
+      var destinationAddress = wrappedY * Memory.VIDEO_WIDTH + wrappedX + 7
+
       var pixelRow = ramReadByte(sourceAddress.toShort)
-      for (i <- 0 until 8) {
+      for (_ <- 0 until 8) {
         val isOn = (pixelRow & 1) == 1
         if (isOn && video(destinationAddress)) collisions += 1
         video(destinationAddress) ^= isOn

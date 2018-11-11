@@ -24,17 +24,23 @@ object Main extends App {
   }
 
   println("Loaded " + programName + " : " + programSize + " bytes" )
+  val display = new Display(memory)
 
-  val millisecondsFor60Hz = 1000 / 60
+  val millisecondsSleep = 2
+  var countUntilDecrement = 12
 
   val cpu = new Cpu(memory)
   while(true) {
     val instruction = cpu.fetch
     cpu.execute(instruction)
-    //memory.dumpVideo()
+    display.update()
 
-    Thread.sleep(millisecondsFor60Hz)
-    cpu.decrementDelay
+    Thread.sleep(millisecondsSleep)
+    countUntilDecrement -= 1
+    if (countUntilDecrement == 0) {
+      cpu.decrementDelay
+      countUntilDecrement = 12
+    }
   }
 
 }
