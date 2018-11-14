@@ -40,11 +40,11 @@ class Interpreter(val memory: Memory) {
 
   private val fonts = Array[Byte](
     // 0
-      Integer.parseInt("11110000", 2).toByte,
+      Integer.parseInt("01100000", 2).toByte,
       Integer.parseInt("10010000", 2).toByte,
       Integer.parseInt("10010000", 2).toByte,
       Integer.parseInt("10010000", 2).toByte,
-      Integer.parseInt("11110000", 2).toByte,
+      Integer.parseInt("01100000", 2).toByte,
     // 1
       Integer.parseInt("00100000", 2).toByte,
       Integer.parseInt("01100000", 2).toByte,

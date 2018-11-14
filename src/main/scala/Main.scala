@@ -3,19 +3,23 @@ import scala.language.implicitConversions
 
 object Implicits {
   implicit def intToShort(i: Int): Short = {
-    val highByte: Byte = ((i & 0xFF00) >> 8).toByte
-    val lowByte: Byte = (i & 0xFF).toByte
+    val highByte: Byte = (i & 0xFF00) >> 8
+    val lowByte: Byte = i & 0xFF
     ByteBuffer.wrap(Array[Byte](highByte, lowByte)).getShort
   }
 
   implicit def intToByte(i: Int): Byte = {
-    val lowByte: Byte = (i & 0xFF).toByte
+    val lowByte: Byte = (i % 256).toByte
     ByteBuffer.wrap(Array[Byte](0x00, lowByte)).get(1)
   }
 
   implicit def shortToByte(i: Short): Byte = {
-    val lowByte: Byte = (i & 0xFF).toByte
+    val lowByte: Byte = i & 0xFF
     ByteBuffer.wrap(Array[Byte](0x00, lowByte)).get(1)
+  }
+
+  implicit def byteToShort(i: Byte): Short = {
+    ByteBuffer.wrap(Array[Byte](0x00, i)).getShort
   }
 }
 
@@ -46,9 +50,10 @@ object Main extends App {
   val display = new Display(memory)
 
   val millisecondsSleep = 2
-  var countUntilDecrement = 12
+  var countUntilDecrement = 8
 
   val cpu = new Cpu(memory)
+
   while(true) {
     val instruction = cpu.fetch
     cpu.execute(instruction)
@@ -58,7 +63,7 @@ object Main extends App {
     countUntilDecrement -= 1
     if (countUntilDecrement == 0) {
       cpu.decrementDelay
-      countUntilDecrement = 12
+      countUntilDecrement = 8
     }
   }
 }

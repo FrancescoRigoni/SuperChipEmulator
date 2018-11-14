@@ -5,7 +5,6 @@ class Cpu(val memory: Memory) {
 
   private val regVX = Array.ofDim[Byte](16)
   private var regI:Short = _
-  private var regVF:Boolean = _
 
   private var regSound:Byte = _
   private var regDelay:Byte = _
@@ -83,13 +82,14 @@ class Cpu(val memory: Memory) {
         // Clear display
         memory.clearVideo()
 
-      case v if (v & 0xF0FF) == 0xE09E =>
-        println("Not implemented")
+      case v if (v & 0xF0FF) == 0xE09E => {}
+        //println("Not implemented")
       // Skip next instruction if key with the value of Vx is pressed
       // TODO
 
       case v if (v & 0xF0FF) == 0xE0A1 =>
-        println("Not implemented")
+        //println("Not implemented")
+        regPC = regPC + 2
       // Skip next instruction if key with the value of Vx is not pressed
       // TODO
 
@@ -138,14 +138,14 @@ class Cpu(val memory: Memory) {
         // Store registers V0 through Vx in memory starting at location I
         val x = getX(v)
         memory.ramStartStoring(regI)
-        (0 to x).foreach { v => memory.ramStoreByte(regVX(v)) }
+        (0 to x).foreach { p => memory.ramStoreByte(regVX(p)) }
         memory.ramFinishStoring()
         regI += x + 1
 
       case v if (v & 0xF0FF) == 0xF065 =>
         // Read registers V0 through Vx from memory starting at location I
         val x = getX(v)
-        (0 to x).foreach { v => regVX(v) = memory.ramReadByte(regI + v) }
+        (0 to x).foreach { p => regVX(p) = memory.ramReadByte(regI + p) }
         regI += x + 1
 
       case v if (v & 0xF000) == 0x1000 =>
@@ -206,33 +206,38 @@ class Cpu(val memory: Memory) {
       case v if (v & 0xF00F) == 0x8004 =>
         // Vx = Vx + Vy, set VF = carry
         val (x, y) = getXandY(v)
-        val addition = regVX(x) + regVX(y)
+        val regX:Int = regVX(x)
+        val regY:Int = regVX(y)
+        val addition:Int = regX + regY
         regVX(x) = addition
-        regVF = addition > 255
+        regVX(0xF) = if (addition > 255) 1 else 0
 
       case v if (v & 0xF00F) == 0x8005 =>
         // Set Vx = Vx - Vy, set VF = NOT borrow
         val (x, y) = getXandY(v)
-        regVF = regVX(x) > regVX(y)
-        regVX(x) = regVX(x) - regVX(y)
+        regVX(0xF) = if (regVX(x) > regVX(y)) 1 else 0
+        val regX:Int = regVX(x)
+        val regY:Int = regVX(y)
+        val subtraction:Int = regX - regY
+        regVX(x) = subtraction
 
       case v if (v & 0xF00F) == 0x8006 =>
-        // Set Vx = Vx SHR 1
-        val (x, _) = getXandY(v)
-        regVF = (regVX(x) & 0x1) == 1
-        regVX(x) = regVX(x) / 2
+        // Set Vx = Vy SHR 1
+        val (x, y) = getXandY(v)
+        regVX(0xF) = if ((regVX(y) & 0x1) == 1) 1 else 0
+        regVX(x) = regVX(y) >>> 1
 
       case v if (v & 0xF00F) == 0x8007 =>
         // Set Vx = Vy - Vx, set VF = NOT borrow
         val (x, y) = getXandY(v)
-        regVF = regVX(y) > regVX(x)
+        regVX(0xF) = if (regVX(y) > regVX(x)) 1 else 0
         regVX(x) = regVX(y) - regVX(x)
 
       case v if (v & 0xF00F) == 0x800E =>
         // Set Vx = Vx SHL 1
-        val (x, _) = getXandY(v)
-        regVF = (regVX(x) & 0x80) == 0x80
-        regVX(x) = regVX(x) * 2
+        val (x, y) = getXandY(v)
+        regVX(0xF) = if ((regVX(y) & 0x80) == 0x80) 1 else 0
+        regVX(x) = regVX(y) << 1
 
       case v if (v & 0xF00F) == 0x9000 =>
         // Skip next instruction if Vx != Vy
@@ -255,7 +260,7 @@ class Cpu(val memory: Memory) {
       case v if (v & 0xF000) == 0xD000 =>
         // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
         val (x, y, n) = getXYN(v)
-        regVF = memory.showSprite(n, regI, regVX(x), regVX(y))
+        regVX(0xF) = if(memory.showSprite(n, regI, regVX(x), regVX(y))) 1 else 0
 
       case _ =>
         println("Not implemented! " + instr)

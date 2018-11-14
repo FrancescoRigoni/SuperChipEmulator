@@ -3,7 +3,7 @@ import java.awt.Color
 import java.awt.Graphics
 
 object Display {
-  val PIXEL_SCALE = 16
+  val PIXEL_SCALE = 8
   val BACKGROUND_COLOR = Color.BLACK
 }
 
@@ -11,7 +11,7 @@ class Display(private val memory: Memory) {
   val window: JFrame = new JFrame
   window.setSize(
     Memory.VIDEO_WIDTH * Display.PIXEL_SCALE,
-    Memory.VIDEO_HEIGHT * Display.PIXEL_SCALE)
+    (Memory.VIDEO_HEIGHT * Display.PIXEL_SCALE) + 30)
   window.setContentPane(new FrameBufferPanel(memory))
   window.setVisible(true)
   window.setBackground(Display.BACKGROUND_COLOR)
