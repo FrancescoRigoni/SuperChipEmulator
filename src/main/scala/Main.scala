@@ -24,7 +24,7 @@ object Implicits {
 }
 
 object Main extends App {
-  val programName = "demo.ch8"
+  val programName = "tetris.ch8"
 
   println("+++ CHIP8 Emulator started +++")
   val memory = new Memory
@@ -47,12 +47,13 @@ object Main extends App {
   }
 
   println("Loaded " + programName + " : " + programSize + " bytes" )
-  val display = new Display(memory)
+  val controller = new Controller
+  val display = new Display(memory, controller)
 
   val millisecondsSleep = 2
   var countUntilDecrement = 8
 
-  val cpu = new Cpu(memory)
+  val cpu = new Cpu(memory, controller)
 
   while(true) {
     val instruction = cpu.fetch

@@ -1,7 +1,7 @@
 
 import Implicits._
 
-class Cpu(val memory: Memory) {
+class Cpu(private val memory: Memory, private val controller: Controller) {
 
   private val regVX = Array.ofDim[Byte](16)
   private var regI:Short = _
@@ -82,16 +82,15 @@ class Cpu(val memory: Memory) {
         // Clear display
         memory.clearVideo()
 
-      case v if (v & 0xF0FF) == 0xE09E => {}
-        //println("Not implemented")
-      // Skip next instruction if key with the value of Vx is pressed
-      // TODO
+      case v if (v & 0xF0FF) == 0xE09E =>
+        // Skip next instruction if key with the value of Vx is pressed
+        val x = getX(v)
+        if (controller.isKeyPressed(regVX(x))) regPC = regPC + 2
 
       case v if (v & 0xF0FF) == 0xE0A1 =>
-        //println("Not implemented")
-        regPC = regPC + 2
-      // Skip next instruction if key with the value of Vx is not pressed
-      // TODO
+        // Skip next instruction if key with the value of Vx is not pressed
+        val x = getX(v)
+        if (!controller.isKeyPressed(regVX(x))) regPC = regPC + 2
 
       case v if (v & 0xF0FF) == 0xF007 =>
         // Set Vx = delay timer value
@@ -99,8 +98,12 @@ class Cpu(val memory: Memory) {
         regVX(x) = regDelay
 
       case v if (v & 0xF0FF) == 0xF00A =>
-      // Wait for a key press, store the value of the key in Vx
-      // TODO
+        // Wait for a key press, store the value of the key in Vx
+        if (!controller.isAnyKeyPressed()) regPC = regPC - 2
+        else {
+          val x = getX(v)
+          regVX(x) = controller.getKeyPressed()
+        }
 
       case v if (v & 0xF0FF) == 0xF015 =>
         // Set delay timer = Vx

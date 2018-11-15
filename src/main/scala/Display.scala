@@ -1,13 +1,14 @@
 import javax.swing.{JFrame, JPanel}
 import java.awt.Color
 import java.awt.Graphics
+import java.awt.event.{KeyEvent, KeyListener}
 
 object Display {
-  val PIXEL_SCALE = 8
+  val PIXEL_SCALE = 12
   val BACKGROUND_COLOR = Color.BLACK
 }
 
-class Display(private val memory: Memory) {
+class Display(private val memory: Memory, private val controller: Controller) extends KeyListener {
   val window: JFrame = new JFrame
   window.setSize(
     Memory.VIDEO_WIDTH * Display.PIXEL_SCALE,
@@ -15,10 +16,21 @@ class Display(private val memory: Memory) {
   window.setContentPane(new FrameBufferPanel(memory))
   window.setVisible(true)
   window.setBackground(Display.BACKGROUND_COLOR)
+  window.addKeyListener(this)
 
   def update(): Unit = {
     window.repaint()
   }
+
+  override def keyPressed(e: KeyEvent): Unit = {
+    controller.setKeyPressed(e.getKeyChar, true)
+  }
+
+  override def keyReleased(e: KeyEvent): Unit = {
+    controller.setKeyPressed(e.getKeyChar, false)
+  }
+
+  override def keyTyped(e: KeyEvent): Unit = {}
 }
 
 class FrameBufferPanel(private val memory:Memory) extends JPanel {
