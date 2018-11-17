@@ -14,7 +14,11 @@ To run the emulator use `sbt run`
 sbt "run astrododge.ch8"
 ```
 
+You can also import the project in IntelliJ.
+
 ![Astrododge](https://raw.githubusercontent.com/FrancescoRigoni/Chip8Emulator/master/screenshots/astrododge1.png "Astrododge")
 ![Astrododge](https://raw.githubusercontent.com/FrancescoRigoni/Chip8Emulator/master/screenshots/astrododge2.png "Astrododge")
 ![Trip8](https://raw.githubusercontent.com/FrancescoRigoni/Chip8Emulator/master/screenshots/trip8.png "Trip8")
+
+Visit my website [The Code Butchery](https://thecodebutchery.com) for more
 
