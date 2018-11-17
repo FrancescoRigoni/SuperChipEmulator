@@ -1,7 +1,7 @@
 Chip8 platform emulator
 ====================================
 An emulator for the Chip8 platform written in Scala.
-This was my first emulator, ans also my first real Scala project. It works fairly well, however there are still a few small
+This was my first emulator, and also my first real Scala project. It works fairly well, however there are still a few small
 bugs which I'm investigating and will hopefully fix.
 
 To build the emulator you need to make sure you have `scalac` and `sbt`, then run:
