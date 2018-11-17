@@ -1,3 +1,18 @@
+/*
+  Chip8 Emulator.
+
+  Copyright (C) 2018 Francesco Rigoni - francesco.rigoni@gmail.com
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License v3 as published by
+  the Free Software Foundation.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 import javax.swing.{JFrame, JPanel}
 import java.awt.{Color, Dimension, Graphics}
 import java.awt.event.{KeyEvent, KeyListener, WindowEvent, WindowListener}
@@ -38,7 +53,7 @@ class Display(private val memory: Memory, private val controller: Controller) ex
     window.getContentPane.setPreferredSize(new Dimension(Memory.VIDEO_WIDTH * Display.PIXEL_SCALE, Memory.VIDEO_HEIGHT * Display.PIXEL_SCALE))
     window.pack()
     window.setVisible(true)
-    window.setTitle("Chip8")
+    window.setTitle(EmulatorParameters.NAME)
     window.setResizable(false)
     window.addWindowListener(this)
     window.setBackground(Display.BACKGROUND_COLOR)

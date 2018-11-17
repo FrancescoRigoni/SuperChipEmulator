@@ -1,3 +1,17 @@
+/*
+  Chip8 Emulator.
+
+  Copyright (C) 2018 Francesco Rigoni - francesco.rigoni@gmail.com
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License v3 as published by
+  the Free Software Foundation.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -70,9 +84,11 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
   def execute(instr : Short) : Unit = {
     val realPC = regPC - 0x200
 
-//    if (nSprites > 1298){
-//      println("Executing " + f"$instr%X" + " at " + (regPC-2))
-//    }
+//    DEBUG LOGS
+//    print("Executing " + f"$instr%X" + " at " + (regPC-2) + " ")
+//    print("I: " + regI + " R: [")
+//    for (reg <- regVX) {print(" " + reg)}
+//    println("]")
 
     instr match {
       case v if v == 0x00EE =>
@@ -91,12 +107,14 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
       case v if (v & 0xF0FF) == 0xE0A1 =>
         // Skip next instruction if key with the value of Vx is not pressed
         val x = getX(v)
-        if (!controller.isKeyPressed(regVX(x))) regPC = regPC + 2
+        if (!controller.isKeyPressed(regVX(x))) {
+          regPC = regPC + 2
+        }
 
       case v if (v & 0xF0FF) == 0xF007 =>
         // Set Vx = delay timer value
         val x = getX(v)
-        regVX(x) = regDelay.get()
+        regVX(x) = regDelay.get() & 0xFF
 
       case v if (v & 0xF0FF) == 0xF00A =>
         // Wait for a key press, store the value of the key in Vx
@@ -120,7 +138,7 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
       case v if (v & 0xF0FF) == 0xF01E =>
         // Set I = I + Vx
         val x = getX(v)
-        regI = regI + regVX(x)
+        regI = regI + (regVX(x) & 0xFF)
 
       case v if (v & 0xF0FF) == 0xF029 =>
         // Set I = location of sprite for digit Vx
