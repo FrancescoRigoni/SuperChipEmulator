@@ -51,35 +51,29 @@ class Memory {
     ByteBuffer.wrap(Array[Byte](highByte, lowByte)).getShort
   }
 
-  def clearVideo() : Unit = {
+  def clearVideo() : Unit = synchronized {
     for(i <- video.indices) {
       video(i) = false
     }
   }
 
-  def showSprite(height:Int, fromAddress: Int, xCoord: Byte, yCoord: Byte) : Boolean = {
+  def showSprite(height:Int, fromAddress: Int, xCoord: Byte, yCoord: Byte) : Boolean = synchronized {
+    // println("Draw sprite at " + xCoord + ":" + yCoord + " fromMem: " + fromAddress + " size: " + height)
     var collisions = 0
     var sourceAddress = fromAddress
 
-    if (xCoord < 0 || yCoord < 0) {
-      return false
-    }
-
-    if (xCoord >= Memory.VIDEO_WIDTH || yCoord >= Memory.VIDEO_HEIGHT) {
-      return false
-    }
-
     for (y <- yCoord until yCoord + height) {
-      val positiveY:Byte = y % Memory.VIDEO_HEIGHT
+      val positiveY:Byte = Math.abs(y) % Memory.VIDEO_HEIGHT
 
       for (x <- xCoord until xCoord + 8) {
-        val positiveX:Byte = x % Memory.VIDEO_WIDTH
+        val positiveX:Byte = Math.abs(x) % Memory.VIDEO_WIDTH
 
-        val locationInVideoMemory:Int = (positiveY * Memory.VIDEO_WIDTH) + positiveX
+        val locationInVideoMemory:Short = (positiveY * Memory.VIDEO_WIDTH) + positiveX
         val currentRow = ramReadByte(sourceAddress)
         val currentPx = x - xCoord
         val mask:Byte = 0x80 >> currentPx
         val pixelShouldBeOn = (currentRow & mask) != 0
+
         val current = video(locationInVideoMemory)
         if (current && pixelShouldBeOn) collisions += 1
         video(locationInVideoMemory) ^= pixelShouldBeOn

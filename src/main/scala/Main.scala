@@ -49,22 +49,36 @@ object Main extends App {
   println("Loaded " + programName + " : " + programSize + " bytes" )
   val controller = new Controller
   val display = new Display(memory, controller)
+  display.start()
 
-  val millisecondsSleep = 2
-  var countUntilDecrement = 8
+  var lastDelayDecrement = System.currentTimeMillis()
 
   val cpu = new Cpu(memory, controller)
 
-  while(true) {
-    val instruction = cpu.fetch
-    cpu.execute(instruction)
-    display.update()
-
-    Thread.sleep(millisecondsSleep)
-    countUntilDecrement -= 1
-    if (countUntilDecrement == 0) {
-      cpu.decrementDelay
-      countUntilDecrement = 8
+  val delayThread = new Thread {
+    override def run(): Unit = {
+      while(!isInterrupted) {
+        val elapsed = System.currentTimeMillis() - lastDelayDecrement
+        if (elapsed >= 16) {
+          cpu.decrementDelay
+          lastDelayDecrement = System.currentTimeMillis()
+        }
+      }
     }
   }
+
+  delayThread.start()
+
+  val frequency = 400
+
+  while(display.isRunning) {
+    cpu.execute(cpu.fetch)
+    Thread.sleep(1000/frequency)
+  }
+
+  delayThread.interrupt()
+  delayThread.join()
+
+  println("Finished")
+  System.exit(0)
 }

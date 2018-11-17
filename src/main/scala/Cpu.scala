@@ -1,4 +1,6 @@
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import Implicits._
 
 class Cpu(private val memory: Memory, private val controller: Controller) {
@@ -7,18 +9,15 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
   private var regI:Short = _
 
   private var regSound:Byte = _
-  private var regDelay:Byte = _
+  private var regDelay:AtomicInteger = new AtomicInteger()
 
   private var regPC:Int = Memory.PROGRAM_START
   private var regSP:Byte = _
 
   private var stack = List[Short]()
 
-  private var random = 123
-  private val randomIncrement = 78
-
   def decrementDelay : Unit = {
-    if (regDelay != 0) regDelay -= 1
+    if (regDelay.get() > 0) regDelay.set(regDelay.get()-1)
   }
 
   private def pop : Short = {
@@ -31,7 +30,7 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
     stack = value :: stack
   }
 
-  def fetch : Int = {
+  def fetch : Short = {
     val value = memory.ramReadTwoBytes(regPC)
     regPC = regPC + 2
     value
@@ -65,13 +64,15 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
   }
 
   private def generateRandom() : Byte = {
-    random = random + randomIncrement
-    random
+    System.currentTimeMillis().toByte
   }
 
-  def execute(instruction : Int) : Unit = {
-    val instr:Short = instruction
+  def execute(instr : Short) : Unit = {
     val realPC = regPC - 0x200
+
+//    if (nSprites > 1298){
+//      println("Executing " + f"$instr%X" + " at " + (regPC-2))
+//    }
 
     instr match {
       case v if v == 0x00EE =>
@@ -95,7 +96,7 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
       case v if (v & 0xF0FF) == 0xF007 =>
         // Set Vx = delay timer value
         val x = getX(v)
-        regVX(x) = regDelay
+        regVX(x) = regDelay.get()
 
       case v if (v & 0xF0FF) == 0xF00A =>
         // Wait for a key press, store the value of the key in Vx
@@ -108,7 +109,8 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
       case v if (v & 0xF0FF) == 0xF015 =>
         // Set delay timer = Vx
         val x = getX(v)
-        regDelay = regVX(x)
+        regDelay.set(regVX(x))
+        regDelay.set(regDelay.get() & 0xFF)
 
       case v if (v & 0xF0FF) == 0xF018 =>
         // Set sound timer = Vx
@@ -150,41 +152,6 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
         val x = getX(v)
         (0 to x).foreach { p => regVX(p) = memory.ramReadByte(regI + p) }
         regI += x + 1
-
-      case v if (v & 0xF000) == 0x1000 =>
-        // Jump to location nnn
-        val valu = getNNN(v)
-        regPC = valu
-
-      case v if (v & 0xF000) == 0x2000 =>
-        // Call subroutine at nnn.
-        push(regPC)
-        regPC = getNNN(v)
-
-      case v if (v & 0xF000) == 0x3000 =>
-        // Skip next instruction if Vx = kk
-        val (x, kk) = getXandKK(v)
-        if (regVX(x) == kk) regPC = regPC + 2
-
-      case v if (v & 0xF000) == 0x4000 =>
-        // Skip next instruction if Vx != kk.
-        val (x, kk) = getXandKK(v)
-        if (regVX(x) != kk) regPC = regPC + 2
-
-      case v if (v & 0xF000) == 0x5000 =>
-        // Skip next instruction if Vx = Vy.
-        val (x, y) = getXandY(v)
-        if (regVX(x) == regVX(y)) regPC += 2
-
-      case v if (v & 0xF000) == 0x6000 =>
-        // Set Vx = kk.
-        val (x, kk) = getXandKK(v)
-        regVX(x) = kk
-
-      case v if (v & 0xF000) == 0x7000 =>
-        // Set Vx = Vx + kk
-        val (x, kk) = getXandKK(v)
-        regVX(x) = regVX(x) + kk
 
       case v if (v & 0xF00F) == 0x8000 =>
         // Set Vx = Vy
@@ -247,6 +214,41 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
         val (x, y) = getXandY(v)
         if (regVX(x) != regVX(y)) regPC += 2
 
+      case v if (v & 0xF000) == 0x1000 =>
+        // Jump to location nnn
+        val valu = getNNN(v)
+        regPC = valu
+
+      case v if (v & 0xF000) == 0x2000 =>
+        // Call subroutine at nnn.
+        push(regPC)
+        regPC = getNNN(v)
+
+      case v if (v & 0xF000) == 0x3000 =>
+        // Skip next instruction if Vx = kk
+        val (x, kk) = getXandKK(v)
+        if (regVX(x) == kk) regPC = regPC + 2
+
+      case v if (v & 0xF000) == 0x4000 =>
+        // Skip next instruction if Vx != kk.
+        val (x, kk) = getXandKK(v)
+        if (regVX(x) != kk) regPC = regPC + 2
+
+      case v if (v & 0xF000) == 0x5000 =>
+        // Skip next instruction if Vx = Vy.
+        val (x, y) = getXandY(v)
+        if (regVX(x) == regVX(y)) regPC += 2
+
+      case v if (v & 0xF000) == 0x6000 =>
+        // Set Vx = kk.
+        val (x, kk) = getXandKK(v)
+        regVX(x) = kk
+
+      case v if (v & 0xF000) == 0x7000 =>
+        // Set Vx = Vx + kk
+        val (x, kk) = getXandKK(v)
+        regVX(x) = regVX(x) + kk
+
       case v if (v & 0xF000) == 0xA000 =>
         // I = nnn
         regI = getNNN(v)
@@ -264,9 +266,12 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
         // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
         val (x, y, n) = getXYN(v)
         regVX(0xF) = if(memory.showSprite(n, regI, regVX(x), regVX(y))) 1 else 0
+        nSprites = nSprites + 1
 
       case _ =>
         println("Not implemented! " + instr)
     }
   }
+
+  var nSprites = 0
 }
