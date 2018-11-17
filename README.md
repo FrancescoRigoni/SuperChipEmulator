@@ -11,7 +11,7 @@ $ sbt compile
 
 To run the emulator use `sbt run`
 ```
-sbt "run astrododge.ch8"
+$ sbt "run astrododge.ch8"
 ```
 
 You can also import the project in IntelliJ.
