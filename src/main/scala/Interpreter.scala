@@ -13,7 +13,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import java.io.{BufferedInputStream, FileInputStream, IOException}
+import java.io.{BufferedInputStream, FileInputStream, FileNotFoundException, IOException}
 
 class Interpreter(val memory: Memory) {
 
@@ -46,6 +46,7 @@ class Interpreter(val memory: Memory) {
 
     } catch {
       case e: IOException => e.printStackTrace()
+      case _: FileNotFoundException => {}
     } finally {
       if (in.isDefined) in.get.close()
     }

@@ -84,11 +84,15 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
   def execute(instr : Short) : Unit = {
     val realPC = regPC - 0x200
 
-//    DEBUG LOGS
-//    print("Executing " + f"$instr%X" + " at " + (regPC-2) + " ")
-//    print("I: " + regI + " R: [")
-//    for (reg <- regVX) {print(" " + reg)}
-//    println("]")
+    // DEBUG LOGS
+    if (EmulatorParameters.DEBUG_CPU) {
+      print("Executing " + f"$instr%X" + " at " + (regPC - 2) + " ")
+      print("I: " + regI + " R: [")
+      for (reg <- regVX) {
+        print(" " + reg)
+      }
+      println("]")
+    }
 
     instr match {
       case v if v == 0x00EE =>
@@ -138,7 +142,7 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
       case v if (v & 0xF0FF) == 0xF01E =>
         // Set I = I + Vx
         val x = getX(v)
-        regI = regI + (regVX(x) & 0xFF)
+        regI = (regI + (regVX(x) & 0xFF)) & 0xFFF
 
       case v if (v & 0xF0FF) == 0xF029 =>
         // Set I = location of sprite for digit Vx
@@ -163,13 +167,14 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
         memory.ramStartStoring(regI)
         (0 to x).foreach { p => memory.ramStoreByte(regVX(p)) }
         memory.ramFinishStoring()
-        regI += x + 1
+        regI += (x & 0xFF)
+
 
       case v if (v & 0xF0FF) == 0xF065 =>
         // Read registers V0 through Vx from memory starting at location I
         val x = getX(v)
         (0 to x).foreach { p => regVX(p) = memory.ramReadByte(regI + p) }
-        regI += x + 1
+        regI += (x & 0xFF)
 
       case v if (v & 0xF00F) == 0x8000 =>
         // Set Vx = Vy
@@ -210,10 +215,10 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
         regVX(x) = subtraction
 
       case v if (v & 0xF00F) == 0x8006 =>
-        // Set Vx = Vy SHR 1
-        val (x, y) = getXandY(v)
-        regVX(0xF) = if ((regVX(y) & 0x1) == 1) 1 else 0
-        regVX(x) = regVX(y) >>> 1
+        // Set Vx = Vx SHR 1
+        val (x, _) = getXandY(v)
+        regVX(0xF) = if ((regVX(x) & 0x1) == 1) 1 else 0
+        regVX(x) = regVX(x) >>> 1
 
       case v if (v & 0xF00F) == 0x8007 =>
         // Set Vx = Vy - Vx, set VF = NOT borrow
@@ -224,8 +229,8 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
       case v if (v & 0xF00F) == 0x800E =>
         // Set Vx = Vx SHL 1
         val (x, y) = getXandY(v)
-        regVX(0xF) = if ((regVX(y) & 0x80) == 0x80) 1 else 0
-        regVX(x) = regVX(y) << 1
+        regVX(0xF) = if ((regVX(x) & 0x80) == 0x80) 1 else 0
+        regVX(x) = regVX(x) << 1
 
       case v if (v & 0xF00F) == 0x9000 =>
         // Skip next instruction if Vx != Vy
@@ -269,7 +274,7 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
 
       case v if (v & 0xF000) == 0xA000 =>
         // I = nnn
-        regI = getNNN(v)
+        regI = getNNN(v) & 0xFFF
 
       case v if (v & 0xF000) == 0xB000 =>
         // Jump to location nnn + V0

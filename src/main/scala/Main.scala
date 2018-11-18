@@ -39,8 +39,9 @@ object Implicits {
 }
 
 object EmulatorParameters {
-  val CPU_FREQUENCY_HZ = 400
+  val CPU_FREQUENCY_HZ = 1000
   val NAME = "Chip8 Emulator"
+  val DEBUG_CPU = false
 }
 
 object Main extends App {
