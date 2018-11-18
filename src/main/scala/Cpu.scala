@@ -13,6 +13,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+import java.util.Random
 import java.util.concurrent.atomic.AtomicInteger
 
 import Implicits._
@@ -78,7 +79,7 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
   }
 
   private def generateRandom() : Byte = {
-    System.currentTimeMillis().toByte
+    new Random().nextInt()
   }
 
   def execute(instr : Short) : Unit = {
@@ -147,7 +148,7 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
       case v if (v & 0xF0FF) == 0xF029 =>
         // Set I = location of sprite for digit Vx
         val x = getX(v)
-        regI = regVX(x) * 5
+        regI = ((regVX(x) * 5) & 0xFFF)
 
       case v if (v & 0xF0FF) == 0xF033 =>
         // Store BCD representation of Vx in memory locations I, I+1, and I+2

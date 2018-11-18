@@ -1,17 +1,16 @@
 Chip8 platform emulator
 ====================================
 An emulator for the Chip8 platform written in Scala.
-This was my first emulator, and also my first real Scala project. It works fairly well, however there are still a few small
-bugs which I'm investigating and will hopefully fix.
+This was my first emulator, and also my first real Scala project.
 
 To build the emulator you need to make sure you have `scalac` and `sbt`, then run:
 ```
 $ sbt compile
 ```
 
-To run the emulator use `sbt run`
+To run the emulator use the `startemu.sh` script
 ```
-$ sbt "run astrododge.ch8"
+$ ./startemu.sh chip-8-roms/games/Astro\ Dodge\ \[Revival\ Studios\,\ 2008\].ch8
 ```
 
 You can also import the project in IntelliJ.

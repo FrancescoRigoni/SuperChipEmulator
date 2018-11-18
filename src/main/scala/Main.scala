@@ -53,8 +53,11 @@ object Main extends App {
   }
 
   var programName:String = _
-  if (args.length == 1) {
-    programName = args(0)
+  if (args.length >= 1) {
+    val fileNameBuilder = new StringBuilder()
+    for (a <- args) fileNameBuilder.append(a).append(" ")
+    programName = fileNameBuilder.toString().substring(0, fileNameBuilder.length-1)
+
   } else {
     printHelp()
     System.exit(1)
@@ -67,7 +70,7 @@ object Main extends App {
   val interpreter = new Interpreter(memory)
   interpreter.loadSelf()
 
-  println("Loading " + programName)
+  println("Loading '" + programName + "'")
   val programSize = interpreter
     .loadProgram(programName)
     .getOrElse {

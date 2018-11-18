@@ -13,7 +13,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import java.io.{BufferedInputStream, FileInputStream, FileNotFoundException, IOException}
+import java.io.{BufferedInputStream, FileInputStream, FileNotFoundException, IOException, File}
 
 class Interpreter(val memory: Memory) {
 
@@ -28,7 +28,8 @@ class Interpreter(val memory: Memory) {
     var programSize: Option[Int] = None
 
     try {
-      in = Some(new FileInputStream(filePath))
+      val file = new File(filePath)
+      in = Some(new FileInputStream(file.getAbsolutePath))
       memory.ramStartStoring(Memory.PROGRAM_START)
 
       val bis = new BufferedInputStream(new FileInputStream(filePath))
