@@ -10,7 +10,7 @@ $ sbt compile
 
 To run the emulator use the `startemu.sh` script
 ```
-$ ./startemu.sh chip-8-roms/games/Astro\ Dodge\ \[Revival\ Studios\,\ 2008\].ch8
+$  ./startemu.sh chip-8-roms/games/Space\ Invaders\ \[David\ Winter\].ch8
 ```
 
 You can also import the project in IntelliJ.
