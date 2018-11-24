@@ -13,28 +13,25 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import java.nio.ByteBuffer
 import scala.language.implicitConversions
 
 object Implicits {
   implicit def intToShort(i: Int): Short = {
-    val highByte: Byte = (i & 0xFF00) >> 8
-    val lowByte: Byte = i & 0xFF
-    ByteBuffer.wrap(Array[Byte](highByte, lowByte)).getShort
+    val highByte = i & 0xFF00
+    val lowByte = i & 0xFF
+    (highByte | lowByte).toShort
   }
 
   implicit def intToByte(i: Int): Byte = {
-    val lowByte: Byte = (i & 0xFF).toByte
-    ByteBuffer.wrap(Array[Byte](0x00, lowByte)).get(1)
+    (i & 0xFF).toByte
   }
 
   implicit def shortToByte(i: Short): Byte = {
-    val lowByte: Byte = i & 0xFF
-    ByteBuffer.wrap(Array[Byte](0x00, lowByte)).get(1)
+    (i & 0xFF).toByte
   }
 
   implicit def byteToShort(i: Byte): Short = {
-    ByteBuffer.wrap(Array[Byte](0x00, i)).getShort
+    (i.toShort & 0xFF).toShort
   }
 }
 

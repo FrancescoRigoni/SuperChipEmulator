@@ -24,7 +24,7 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
   private var regI:Short = _
 
   private var regSound:Byte = _
-  private var regDelay:AtomicInteger = new AtomicInteger()
+  private val regDelay:AtomicInteger = new AtomicInteger()
 
   private var regPC:Int = Memory.PROGRAM_START
 
