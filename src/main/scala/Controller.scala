@@ -41,10 +41,8 @@ class Controller() {
   }
 
   def setKeyPressed(char: Char, pressed: Boolean): Unit = synchronized {
-    var index = 0
     try {
-      index = keyMap(char)
-      keys(index) = pressed
+      keys(keyMap(char)) = pressed
     } catch {
       case _: NoSuchElementException => {}
     }

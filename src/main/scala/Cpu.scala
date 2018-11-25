@@ -22,12 +22,9 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
 
   private val regVX = Array.ofDim[Byte](16)
   private var regI:Short = _
-
   private var regSound:Byte = _
   private val regDelay:AtomicInteger = new AtomicInteger()
-
   private var regPC:Int = Memory.PROGRAM_START
-
   private var stack = List[Short]()
 
   def decrementDelay : Unit = {
@@ -82,8 +79,6 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
   }
 
   def execute(instr : Short) : Unit = {
-    val realPC = regPC - 0x200
-
     // DEBUG LOGS
     if (EmulatorParameters.DEBUG_CPU) {
       print("Executing " + f"$instr%X" + " at " + (regPC - 2) + " ")

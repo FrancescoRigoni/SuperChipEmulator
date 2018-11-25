@@ -13,28 +13,27 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import java.nio.ByteBuffer
 import Implicits._
 
 object Memory {
-  val PROGRAM_START:Short = 0x200
+  val RAM_SIZE = 4096
+  val PROGRAM_START = 0x200.toShort
   val VIDEO_WIDTH = 64
   val VIDEO_HEIGHT = 32
   val SPRITE_WIDTH = 8
 }
 
 class Memory {
-  private val POINTER_INVALID:Short = 4096
-  private val ram = Array.ofDim[Byte](POINTER_INVALID)
+  private val ram = Array.ofDim[Byte](Memory.RAM_SIZE)
+  private var storingPointer:Short = Memory.RAM_SIZE
   val video = Array.ofDim[Boolean](Memory.VIDEO_WIDTH * Memory.VIDEO_HEIGHT)
-  private var storingPointer:Short = POINTER_INVALID
 
   def ramStartStoring(from:Short) : Unit = {
     storingPointer = from
   }
 
   def ramFinishStoring() : Unit = {
-    storingPointer = POINTER_INVALID
+    storingPointer = Memory.RAM_SIZE
   }
 
   def ramStoreByte(byte:Byte) : Unit = {
@@ -47,9 +46,9 @@ class Memory {
   }
 
   def ramReadTwoBytes(address:Short) : Short = {
-    val highByte:Byte = ram(address)
-    val lowByte:Byte = ram(address + 1)
-    ByteBuffer.wrap(Array[Byte](highByte, lowByte)).getShort
+    val highByte = ram(address)
+    val lowByte = ram(address + 1)
+    (((highByte << 8) & 0xFF00) | (lowByte & 0xFF)).toShort
   }
 
   def clearVideo() : Unit = synchronized {
@@ -64,10 +63,10 @@ class Memory {
     var sourceAddress = fromAddress
 
     for (y <- yCoord until yCoord + height) {
-      val positiveY:Byte = Math.abs(y) % Memory.VIDEO_HEIGHT
+      val positiveY:Byte = y % Memory.VIDEO_HEIGHT
 
       for (x <- xCoord until xCoord + 8) {
-        val positiveX:Byte = Math.abs(x) % Memory.VIDEO_WIDTH
+        val positiveX:Byte = x % Memory.VIDEO_WIDTH
 
         val locationInVideoMemory:Short = (positiveY * Memory.VIDEO_WIDTH) + positiveX
         val currentRow = ramReadByte(sourceAddress)

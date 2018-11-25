@@ -26,7 +26,10 @@ object Display {
   val SLEEP_TIME_BETWEEN_RENDERS_MS = 1000 / REFRESH_RATE_HZ
 }
 
-class Display(private val memory: Memory, private val controller: Controller) extends KeyListener with WindowListener {
+class Display(private val memory: Memory,
+              private val controller: Controller)
+  extends KeyListener with WindowListener {
+
   val window: JFrame = new JFrame
   var running: AtomicBoolean = new AtomicBoolean(true)
 
@@ -47,10 +50,13 @@ class Display(private val memory: Memory, private val controller: Controller) ex
   }
 
   def start(): Unit = {
+    val windowSize = new Dimension(Memory.VIDEO_WIDTH * Display.PIXEL_SCALE,
+                                   Memory.VIDEO_HEIGHT * Display.PIXEL_SCALE)
+
     val frame = new FrameBufferPanel(memory)
     window.setContentPane(frame)
-    window.getContentPane.setSize(new Dimension(Memory.VIDEO_WIDTH * Display.PIXEL_SCALE, Memory.VIDEO_HEIGHT * Display.PIXEL_SCALE))
-    window.getContentPane.setPreferredSize(new Dimension(Memory.VIDEO_WIDTH * Display.PIXEL_SCALE, Memory.VIDEO_HEIGHT * Display.PIXEL_SCALE))
+    window.getContentPane.setSize(windowSize)
+    window.getContentPane.setPreferredSize(windowSize)
     window.pack()
     window.setVisible(true)
     window.setTitle(EmulatorParameters.NAME)
