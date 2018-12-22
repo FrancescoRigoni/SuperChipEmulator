@@ -105,8 +105,7 @@ class FrameBufferPanel(private val memory:Memory) extends JPanel {
   override def paintComponent(g: Graphics): Unit = {
     for (y <- 0 until Memory.VIDEO_HEIGHT) {
       for (x <- 0 until Memory.VIDEO_WIDTH) {
-        val absolutePosInVideoMemory = y * Memory.VIDEO_WIDTH + x
-        if (memory.video(absolutePosInVideoMemory)) drawLightSquare(g, x, y)
+        if (memory.video(y)(x)) drawLightSquare(g, x, y)
         else drawDarkSquare(g, x, y)
       }
     }
