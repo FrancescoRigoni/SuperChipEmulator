@@ -20,6 +20,7 @@ import Implicits._
 
 class Cpu(private val memory: Memory, private val controller: Controller) {
 
+  private val regHPRPL = Array.ofDim[Byte](8)
   private val regVX = Array.ofDim[Byte](16)
   private var regI:Short = _
   private var regSound:Byte = _

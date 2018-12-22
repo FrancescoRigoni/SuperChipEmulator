@@ -19,7 +19,11 @@ class Interpreter(val memory: Memory) {
 
   def loadSelf() : Unit = {
     memory.ramStartStoring(0)
-    for (v <- fonts) memory.ramStoreByte(v)
+    for (v <- fonts8by5) memory.ramStoreByte(v)
+    memory.ramFinishStoring()
+
+    memory.ramStartStoring(0x100)
+    for (v <- fonts8by10) memory.ramStoreByte(v)
     memory.ramFinishStoring()
   }
 
@@ -55,7 +59,7 @@ class Interpreter(val memory: Memory) {
     programSize
   }
 
-  private val fonts = Array[Byte](
+  private val fonts8by5 = Array[Byte](
     // 0
       Integer.parseInt("01100000", 2).toByte,
       Integer.parseInt("10010000", 2).toByte,
@@ -153,4 +157,117 @@ class Interpreter(val memory: Memory) {
       Integer.parseInt("10000000", 2).toByte,
       Integer.parseInt("10000000", 2).toByte
     )
+
+  private val fonts8by10 = Array[Byte](
+    // 0
+    Integer.parseInt("00000000", 2).toByte,
+    Integer.parseInt("00111100", 2).toByte,
+    Integer.parseInt("01100110", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("01100110", 2).toByte,
+    Integer.parseInt("00111100", 2).toByte,
+    Integer.parseInt("00000000", 2).toByte,
+    // 1
+    Integer.parseInt("00000000", 2).toByte,
+    Integer.parseInt("00011000", 2).toByte,
+    Integer.parseInt("00111000", 2).toByte,
+    Integer.parseInt("01111000", 2).toByte,
+    Integer.parseInt("00011000", 2).toByte,
+    Integer.parseInt("00011000", 2).toByte,
+    Integer.parseInt("00011000", 2).toByte,
+    Integer.parseInt("00011000", 2).toByte,
+    Integer.parseInt("00111100", 2).toByte,
+    Integer.parseInt("00000000", 2).toByte,
+    // 2
+    Integer.parseInt("00000000", 2).toByte,
+    Integer.parseInt("01111110", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("00001100", 2).toByte,
+    Integer.parseInt("00110000", 2).toByte,
+    Integer.parseInt("0110000", 2).toByte,
+    Integer.parseInt("11000000", 2).toByte,
+    Integer.parseInt("11111110", 2).toByte,
+    Integer.parseInt("00000000", 2).toByte,
+    // 3
+    Integer.parseInt("00000000", 2).toByte,
+    Integer.parseInt("11111110", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("01111110", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("11111110", 2).toByte,
+    Integer.parseInt("00000000", 2).toByte,
+    // 4
+    Integer.parseInt("00000000", 2).toByte,
+    Integer.parseInt("00000110", 2).toByte,
+    Integer.parseInt("00001110", 2).toByte,
+    Integer.parseInt("00011110", 2).toByte,
+    Integer.parseInt("00110110", 2).toByte,
+    Integer.parseInt("01100110", 2).toByte,
+    Integer.parseInt("11111111", 2).toByte,
+    Integer.parseInt("00000110", 2).toByte,
+    Integer.parseInt("00000110", 2).toByte,
+    Integer.parseInt("00000000", 2).toByte,
+    // 5
+    Integer.parseInt("00000000", 2).toByte,
+    Integer.parseInt("01111110", 2).toByte,
+    Integer.parseInt("11000000", 2).toByte,
+    Integer.parseInt("11000000", 2).toByte,
+    Integer.parseInt("01111110", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("11111110", 2).toByte,
+    Integer.parseInt("00000000", 2).toByte,
+    // 6
+    Integer.parseInt("00000000", 2).toByte,
+    Integer.parseInt("01111110", 2).toByte,
+    Integer.parseInt("11000000", 2).toByte,
+    Integer.parseInt("11000000", 2).toByte,
+    Integer.parseInt("11000000", 2).toByte,
+    Integer.parseInt("11111110", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("01111110", 2).toByte,
+    Integer.parseInt("00000000", 2).toByte,
+    // 7
+    Integer.parseInt("00000000", 2).toByte,
+    Integer.parseInt("01111111", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("00000110", 2).toByte,
+    Integer.parseInt("00001100", 2).toByte,
+    Integer.parseInt("00011000", 2).toByte,
+    Integer.parseInt("00110000", 2).toByte,
+    Integer.parseInt("01100000", 2).toByte,
+    Integer.parseInt("11000000", 2).toByte,
+    Integer.parseInt("00000000", 2).toByte,
+    // 8
+    Integer.parseInt("00000000", 2).toByte,
+    Integer.parseInt("01111110", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("01111110", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("01111110", 2).toByte,
+    Integer.parseInt("00000000", 2).toByte,
+    // 9
+    Integer.parseInt("00000000", 2).toByte,
+    Integer.parseInt("01111110", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("11000011", 2).toByte,
+    Integer.parseInt("01111111", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("00000011", 2).toByte,
+    Integer.parseInt("01111110", 2).toByte,
+    Integer.parseInt("00000000", 2).toByte
+  )
 }

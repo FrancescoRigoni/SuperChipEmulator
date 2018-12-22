@@ -19,7 +19,8 @@ import java.awt.event.{KeyEvent, KeyListener, WindowEvent, WindowListener}
 import java.util.concurrent.atomic.AtomicBoolean
 
 object Display {
-  val PIXEL_SCALE = 12
+  val PIXEL_SCALE_LOW_RES = 12
+  val PIXEL_SCALE_HIGH_RES = 6
   val BACKGROUND_COLOR = Color.BLACK
   val PIXEL_COLOR = new Color(50, 0, 255)
   val REFRESH_RATE_HZ = 60
@@ -28,7 +29,7 @@ object Display {
 
 class Display(private val memory: Memory,
               private val controller: Controller)
-  extends KeyListener with WindowListener {
+  extends KeyListener with WindowListener with VideoMemoryObserver {
 
   val window: JFrame = new JFrame
   var running: AtomicBoolean = new AtomicBoolean(true)
@@ -50,20 +51,28 @@ class Display(private val memory: Memory,
   }
 
   def start(): Unit = {
-    val windowSize = new Dimension(Memory.VIDEO_WIDTH * Display.PIXEL_SCALE,
-                                   Memory.VIDEO_HEIGHT * Display.PIXEL_SCALE)
-
     val frame = new FrameBufferPanel(memory)
     window.setContentPane(frame)
-    window.getContentPane.setSize(windowSize)
-    window.getContentPane.setPreferredSize(windowSize)
-    window.pack()
     window.setVisible(true)
     window.setTitle(EmulatorParameters.NAME)
     window.setResizable(false)
     window.addWindowListener(this)
     window.setBackground(Display.BACKGROUND_COLOR)
     window.addKeyListener(this)
+
+    setWindowSize()
+  }
+
+  def setWindowSize() : Unit = {
+    val pixelSize = if (memory.isHighRes()) Display.PIXEL_SCALE_HIGH_RES else Display.PIXEL_SCALE_LOW_RES
+    val windowSize = new Dimension(memory.videoWidth * pixelSize, memory.videoHeight * pixelSize)
+    window.getContentPane.setSize(windowSize)
+    window.getContentPane.setPreferredSize(windowSize)
+    window.pack()
+  }
+
+  override def onVideoMemorySizeChanged(highRes: Boolean): Unit = {
+    setWindowSize()
   }
 
   def isRunning() : Boolean = {
@@ -103,8 +112,8 @@ class Display(private val memory: Memory,
 
 class FrameBufferPanel(private val memory:Memory) extends JPanel {
   override def paintComponent(g: Graphics): Unit = {
-    for (y <- 0 until Memory.VIDEO_HEIGHT) {
-      for (x <- 0 until Memory.VIDEO_WIDTH) {
+    for (y <- 0 until memory.videoHeight) {
+      for (x <- 0 until memory.videoWidth) {
         if (memory.video(y)(x)) drawLightSquare(g, x, y)
         else drawDarkSquare(g, x, y)
       }
@@ -112,12 +121,14 @@ class FrameBufferPanel(private val memory:Memory) extends JPanel {
   }
 
   def drawLightSquare(g:Graphics, x: Int, y: Int): Unit = {
+    val pixelSize = if (memory.isHighRes()) Display.PIXEL_SCALE_HIGH_RES else Display.PIXEL_SCALE_LOW_RES
     g.setColor(Display.PIXEL_COLOR)
-    g.fillRect(x*Display.PIXEL_SCALE, y*Display.PIXEL_SCALE, Display.PIXEL_SCALE, Display.PIXEL_SCALE)
+    g.fillRect(x*pixelSize, y*pixelSize, pixelSize, pixelSize)
   }
 
   def drawDarkSquare(g:Graphics, x: Int, y: Int): Unit = {
+    val pixelSize = if (memory.isHighRes()) Display.PIXEL_SCALE_HIGH_RES else Display.PIXEL_SCALE_LOW_RES
     g.setColor(Display.BACKGROUND_COLOR)
-    g.fillRect(x*Display.PIXEL_SCALE, y*Display.PIXEL_SCALE, Display.PIXEL_SCALE, Display.PIXEL_SCALE)
+    g.fillRect(x*pixelSize, y*pixelSize, pixelSize, pixelSize)
   }
 }

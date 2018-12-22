@@ -18,15 +18,45 @@ import Implicits._
 object Memory {
   val RAM_SIZE = 4096
   val PROGRAM_START = 0x200.toShort
-  val VIDEO_WIDTH = 64
-  val VIDEO_HEIGHT = 32
-  val SPRITE_WIDTH = 8
+  private val VIDEO_WIDTH_LRES = 64
+  private val VIDEO_HEIGHT_LRES = 32
+  private val VIDEO_WIDTH_HRES = 128
+  private val VIDEO_HEIGHT_HRES = 64
+  private val SPRITE_WIDTH = 8
+}
+
+trait VideoMemoryObserver {
+  def onVideoMemorySizeChanged(highRes:Boolean)
 }
 
 class Memory {
   private val ram = Array.ofDim[Byte](Memory.RAM_SIZE)
   private var storingPointer:Short = Memory.RAM_SIZE
-  var video = Array.ofDim[Boolean](Memory.VIDEO_HEIGHT, Memory.VIDEO_WIDTH)
+  private var videoHiRes = false
+
+  var videoMemoryObserver:VideoMemoryObserver = _
+
+  var video = Array.ofDim[Boolean](videoHeight, videoWidth)
+
+  def videoWidth : Int = {
+    if (videoHiRes) Memory.VIDEO_WIDTH_HRES else Memory.VIDEO_WIDTH_LRES
+  }
+
+  def videoHeight : Int = {
+    if (videoHiRes) Memory.VIDEO_HEIGHT_HRES else Memory.VIDEO_HEIGHT_LRES
+  }
+
+  def setHighResolution(enabled: Boolean): Unit = {
+    videoHiRes = enabled
+    video = Array.ofDim[Boolean](videoHeight, videoWidth)
+    if (videoMemoryObserver != null) {
+      videoMemoryObserver.onVideoMemorySizeChanged(videoHiRes)
+    }
+  }
+
+  def isHighRes() : Boolean = synchronized {
+    return videoHiRes
+  }
 
   def ramStartStoring(from:Short) : Unit = {
     storingPointer = from
@@ -52,33 +82,33 @@ class Memory {
   }
 
   def clearVideo() : Unit = synchronized {
-    for(x <- 0 until Memory.VIDEO_WIDTH) {
-      for(y <- 0 until Memory.VIDEO_HEIGHT) {
+    for(x <- 0 until videoWidth) {
+      for(y <- 0 until videoHeight) {
         video(y)(x) = false
       }
     }
   }
 
   def scrollUp(lines: Int) : Unit = {
-    val newVideo = Array.fill[Boolean](Memory.VIDEO_HEIGHT, Memory.VIDEO_WIDTH)(false)
-    for (line <- lines until Memory.VIDEO_HEIGHT) {
+    val newVideo = Array.fill[Boolean](videoHeight, videoWidth)(false)
+    for (line <- lines until videoHeight) {
       newVideo(line - lines) = video(line)
     }
     video = newVideo
   }
 
   def scrollDown(lines: Int) : Unit = {
-    val newVideo = Array.fill[Boolean](Memory.VIDEO_HEIGHT, Memory.VIDEO_WIDTH)(false)
-    for (line <- 0 until Memory.VIDEO_HEIGHT - lines) {
+    val newVideo = Array.fill[Boolean](videoHeight, videoWidth)(false)
+    for (line <- 0 until videoHeight - lines) {
       newVideo(line) = video(line + lines)
     }
     video = newVideo
   }
 
   def scrollLeft(columns: Int) : Unit = {
-    val newVideo = Array.fill[Boolean](Memory.VIDEO_HEIGHT, Memory.VIDEO_WIDTH)(false)
-    for (y <- 0 until Memory.VIDEO_HEIGHT) {
-      for (x <- 0 until Memory.VIDEO_WIDTH - columns) {
+    val newVideo = Array.fill[Boolean](videoHeight, videoWidth)(false)
+    for (y <- 0 until videoHeight) {
+      for (x <- 0 until videoWidth - columns) {
         newVideo(y)(x + columns) = video(y)(x)
       }
     }
@@ -86,9 +116,9 @@ class Memory {
   }
 
   def scrollRight(columns: Int) : Unit = {
-    val newVideo = Array.fill[Boolean](Memory.VIDEO_HEIGHT, Memory.VIDEO_WIDTH)(false)
-    for (y <- 0 until Memory.VIDEO_HEIGHT) {
-      for (x <- columns until Memory.VIDEO_WIDTH) {
+    val newVideo = Array.fill[Boolean](videoHeight, videoWidth)(false)
+    for (y <- 0 until videoHeight) {
+      for (x <- columns until videoWidth) {
         newVideo(y)(x - columns) = video(y)(x)
       }
     }
@@ -101,12 +131,40 @@ class Memory {
     var sourceAddress = fromAddress
 
     for (y <- yCoord until yCoord + height) {
-      val positiveY:Byte = y % Memory.VIDEO_HEIGHT
+      val positiveY:Byte = y % videoHeight
 
       for (x <- xCoord until xCoord + 8) {
-        val positiveX:Byte = x % Memory.VIDEO_WIDTH
+        val positiveX:Byte = x % videoWidth
+        val currentRow = ramReadByte(sourceAddress)
+        val currentPx = x - xCoord
+        val mask:Byte = 0x80 >> currentPx
+        val pixelShouldBeOn = (currentRow & mask) != 0
 
-        //val locationInVideoMemory:Short = (positiveY * Memory.VIDEO_WIDTH) + positiveX
+        val current = video(positiveY)(positiveX)
+        if (current && pixelShouldBeOn) collisions += 1
+        video(positiveY)(positiveX) ^= pixelShouldBeOn
+      }
+
+      sourceAddress += 1
+    }
+
+    collisions > 0
+  }
+
+  def showSprite16(fromAddress: Int, xCoord: Byte, yCoord: Byte) : Boolean = synchronized {
+    // 16x16 in hi-res
+    // 8x16 in low-res
+    // println("Draw sprite at " + xCoord + ":" + yCoord + " fromMem: " + fromAddress + " size: " + height)
+    var collisions = 0
+    var sourceAddress = fromAddress
+    val height = 16
+    val width = if (isHighRes()) 16 else 8
+
+    for (y <- yCoord until yCoord + height) {
+      val positiveY:Byte = y % videoHeight
+
+      for (x <- xCoord until xCoord + width) {
+        val positiveX:Byte = x % videoWidth
         val currentRow = ramReadByte(sourceAddress)
         val currentPx = x - xCoord
         val mask:Byte = 0x80 >> currentPx
