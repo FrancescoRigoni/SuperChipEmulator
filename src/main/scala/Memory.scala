@@ -17,7 +17,7 @@ import Implicits._
 
 object Memory {
   val RAM_SIZE = 4096
-  val PROGRAM_START = 0x200.toShort
+  val PROGRAM_START:Short = 0x200.toShort
   private val VIDEO_WIDTH_LRES = 64
   private val VIDEO_HEIGHT_LRES = 32
   private val VIDEO_WIDTH_HRES = 128
@@ -31,7 +31,7 @@ trait VideoMemoryObserver {
 
 class Memory {
   private val ram = Array.ofDim[Byte](Memory.RAM_SIZE)
-  private var storingPointer:Short = Memory.RAM_SIZE
+  private var storingPointer:Int = Memory.RAM_SIZE
   private var videoHiRes = false
 
   var videoMemoryObserver:VideoMemoryObserver = _
@@ -58,7 +58,7 @@ class Memory {
     return videoHiRes
   }
 
-  def ramStartStoring(from:Short) : Unit = {
+  def ramStartStoring(from:Int) : Unit = {
     storingPointer = from
   }
 
@@ -71,14 +71,14 @@ class Memory {
     storingPointer += 1
   }
 
-  def ramReadByte(address:Short) : Byte = {
+  def ramReadByte(address:Int) : Byte = {
     ram(address)
   }
 
   def ramReadTwoBytes(address:Short) : Short = {
-    val highByte = ram(address)
+    val highByte = ram(address.toInt)
     val lowByte = ram(address + 1)
-    (((highByte << 8) & 0xFF00) | (lowByte & 0xFF)).toShort
+    ((highByte << 8) & 0xFF00) | (lowByte & 0xFF)
   }
 
   def clearVideo() : Unit = synchronized {
@@ -125,16 +125,16 @@ class Memory {
     video = newVideo
   }
 
-  def showSprite(height:Int, fromAddress: Int, xCoord: Byte, yCoord: Byte) : Boolean = synchronized {
-    // println("Draw sprite at " + xCoord + ":" + yCoord + " fromMem: " + fromAddress + " size: " + height)
+  def showSprite(height:Int, fromAddress: Int, xCoord: Int, yCoord: Int, xInterleave: Int = 1) : Boolean = synchronized {
+    //println("Draw sprite at " + xCoord + ":" + yCoord + " fromMem: " + fromAddress + " size: " + height)
     var collisions = 0
     var sourceAddress = fromAddress
 
     for (y <- yCoord until yCoord + height) {
-      val positiveY:Byte = y % videoHeight
+      val positiveY = (y & 0xFF) % videoHeight
 
       for (x <- xCoord until xCoord + 8) {
-        val positiveX:Byte = x % videoWidth
+        val positiveX = (x & 0xFF) % videoWidth
         val currentRow = ramReadByte(sourceAddress)
         val currentPx = x - xCoord
         val mask:Byte = 0x80 >> currentPx
@@ -145,39 +145,16 @@ class Memory {
         video(positiveY)(positiveX) ^= pixelShouldBeOn
       }
 
-      sourceAddress += 1
+      sourceAddress += xInterleave
     }
 
     collisions > 0
   }
 
-  def showSprite16(fromAddress: Int, xCoord: Byte, yCoord: Byte) : Boolean = synchronized {
-    // 16x16 in hi-res
-    // 8x16 in low-res
+  def showSprite16(fromAddress: Int, xCoord: Int, yCoord: Int) : Boolean = synchronized {
     // println("Draw sprite at " + xCoord + ":" + yCoord + " fromMem: " + fromAddress + " size: " + height)
-    var collisions = 0
-    var sourceAddress = fromAddress
-    val height = 16
-    val width = if (isHighRes()) 16 else 8
-
-    for (y <- yCoord until yCoord + height) {
-      val positiveY:Byte = y % videoHeight
-
-      for (x <- xCoord until xCoord + width) {
-        val positiveX:Byte = x % videoWidth
-        val currentRow = ramReadByte(sourceAddress)
-        val currentPx = x - xCoord
-        val mask:Byte = 0x80 >> currentPx
-        val pixelShouldBeOn = (currentRow & mask) != 0
-
-        val current = video(positiveY)(positiveX)
-        if (current && pixelShouldBeOn) collisions += 1
-        video(positiveY)(positiveX) ^= pixelShouldBeOn
-      }
-
-      sourceAddress += 1
-    }
-
-    collisions > 0
+    var collisions = showSprite(16, fromAddress, xCoord, yCoord, 2) |
+                     showSprite(16, fromAddress+1, xCoord+8, yCoord, 2)
+    collisions
   }
 }

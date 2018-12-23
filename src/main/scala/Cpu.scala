@@ -1,3 +1,4 @@
+
 /*
   Chip8 Emulator.
 
@@ -13,20 +14,20 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+import java.io.FileWriter
 import java.util.Random
 import java.util.concurrent.atomic.AtomicInteger
 
 import Implicits._
 
-class Cpu(private val memory: Memory, private val controller: Controller) {
-
-  private val regHPRPL = Array.ofDim[Byte](8)
-  private val regVX = Array.ofDim[Byte](16)
-  private var regI:Short = _
-  private var regSound:Byte = _
-  private val regDelay:AtomicInteger = new AtomicInteger()
-  private var regPC:Int = Memory.PROGRAM_START
-  private var stack = List[Short]()
+class Cpu(private val memory: Memory, private val controller: Controller) extends InstructionDecode {
+  val regHPRPL = Array.ofDim[Byte](8)
+  val regVX = Array.ofDim[Byte](16)
+  var regI:Short = _
+  var regSound:Byte = _
+  val regDelay:AtomicInteger = new AtomicInteger()
+  var regPC = Memory.PROGRAM_START
+  var stack = List[Short]()
 
   def decrementDelay : Unit = {
     if (regDelay.get() > 0) regDelay.set(regDelay.get()-1)
@@ -48,249 +49,279 @@ class Cpu(private val memory: Memory, private val controller: Controller) {
     value
   }
 
-  private def getXandKK(instruction:Short) : (Byte, Byte) = {
-    val x: Byte = (instruction & 0x0F00) >> 8
-    val kk: Byte = instruction & 0x00FF
-    (x, kk)
-  }
-
-  private def getX(instruction:Short) : Byte = {
-    (instruction & 0x0F00) >> 8
-  }
-
-  private def getXandY(instruction:Short) : (Byte, Byte) = {
-    val x: Byte = (instruction & 0x0F00) >> 8
-    val y: Byte = (instruction & 0x00F0) >> 4
-    (x, y)
-  }
-
-  private def getXYN(instruction:Short) : (Byte, Byte, Byte) = {
-    val x: Byte = (instruction & 0x0F00) >> 8
-    val y: Byte = (instruction & 0x00F0) >> 4
-    val n: Byte = instruction & 0x000F
-    (x, y, n)
-  }
-
-  private def getNNN(instruction:Short) : Short = {
-    instruction & 0x0FFF
-  }
-
   private def generateRandom() : Byte = {
     new Random().nextInt()
   }
 
   def execute(instr : Short) : Unit = {
+    decode(instr)
+
     // DEBUG LOGS
     if (EmulatorParameters.DEBUG_CPU) {
-      print("Executing " + f"$instr%X" + " at " + (regPC - 2) + " ")
-      print("I: " + regI + " R: [")
-      for (reg <- regVX) {
-        print(" " + reg)
+      val fw = new FileWriter("mine.txt", true)
+      try {
+        fw.write("Executing " + f"$instr%X" + " at " + regPC + " ")
+        fw.write("I: " + regI + " R: [")
+        for (reg <- regVX) {
+          fw.write(" " + reg)
+        }
+        fw.write("]\n")
       }
-      println("]")
-    }
-
-    instr match {
-      case v if v == 0x00EE =>
-        // Return from subroutine
-        regPC = pop
-
-      case v if v == 0x00E0 =>
-        // Clear display
-        memory.clearVideo()
-
-      case v if (v & 0xF0FF) == 0xE09E =>
-        // Skip next instruction if key with the value of Vx is pressed
-        val x = getX(v)
-        if (controller.isKeyPressed(regVX(x))) regPC = regPC + 2
-
-      case v if (v & 0xF0FF) == 0xE0A1 =>
-        // Skip next instruction if key with the value of Vx is not pressed
-        val x = getX(v)
-        if (!controller.isKeyPressed(regVX(x))) {
-          regPC = regPC + 2
-        }
-
-      case v if (v & 0xF0FF) == 0xF007 =>
-        // Set Vx = delay timer value
-        val x = getX(v)
-        regVX(x) = regDelay.get() & 0xFF
-
-      case v if (v & 0xF0FF) == 0xF00A =>
-        // Wait for a key press, store the value of the key in Vx
-        if (!controller.isAnyKeyPressed()) regPC = regPC - 2
-        else {
-          val x = getX(v)
-          regVX(x) = controller.getKeyPressed()
-        }
-
-      case v if (v & 0xF0FF) == 0xF015 =>
-        // Set delay timer = Vx
-        val x = getX(v)
-        regDelay.set(regVX(x))
-        regDelay.set(regDelay.get() & 0xFF)
-
-      case v if (v & 0xF0FF) == 0xF018 =>
-        // Set sound timer = Vx
-        val x = getX(v)
-        regSound = regVX(x)
-
-      case v if (v & 0xF0FF) == 0xF01E =>
-        // Set I = I + Vx
-        val x = getX(v)
-        regI = (regI + (regVX(x) & 0xFF)) & 0xFFF
-
-      case v if (v & 0xF0FF) == 0xF029 =>
-        // Set I = location of sprite for digit Vx
-        val x = getX(v)
-        regI = ((regVX(x) * 5) & 0xFFF)
-
-      case v if (v & 0xF0FF) == 0xF033 =>
-        // Store BCD representation of Vx in memory locations I, I+1, and I+2
-        val x = getX(v)
-        val hundreds = regVX(x) / 100
-        val tenths = (regVX(x) % 100) / 10
-        val units = (regVX(x) % 100) % 10
-        memory.ramStartStoring(regI)
-        memory.ramStoreByte(hundreds)
-        memory.ramStoreByte(tenths)
-        memory.ramStoreByte(units)
-        memory.ramFinishStoring()
-
-      case v if (v & 0xF0FF) == 0xF055 =>
-        // Store registers V0 through Vx in memory starting at location I
-        val x = getX(v)
-        memory.ramStartStoring(regI)
-        (0 to x).foreach { p => memory.ramStoreByte(regVX(p)) }
-        memory.ramFinishStoring()
-        regI += (x & 0xFF)
-
-
-      case v if (v & 0xF0FF) == 0xF065 =>
-        // Read registers V0 through Vx from memory starting at location I
-        val x = getX(v)
-        (0 to x).foreach { p => regVX(p) = memory.ramReadByte(regI + p) }
-        regI += (x & 0xFF)
-
-      case v if (v & 0xF00F) == 0x8000 =>
-        // Set Vx = Vy
-        val (x, y) = getXandY(v)
-        regVX(x) = regVX(y)
-
-      case v if (v & 0xF00F) == 0x8001 =>
-        // Set Vx = Vx OR Vy
-        val (x, y) = getXandY(v)
-        regVX(x) = regVX(x) | regVX(y)
-
-      case v if (v & 0xF00F) == 0x8002 =>
-        // Set Vx = Vx AND Vy
-        val (x, y) = getXandY(v)
-        regVX(x) = regVX(x) & regVX(y)
-
-      case v if (v & 0xF00F) == 0x8003 =>
-        // Set Vx = Vx XOR Vy
-        val (x, y) = getXandY(v)
-        regVX(x) = regVX(x) ^ regVX(y)
-
-      case v if (v & 0xF00F) == 0x8004 =>
-        // Vx = Vx + Vy, set VF = carry
-        val (x, y) = getXandY(v)
-        val regX:Int = regVX(x)
-        val regY:Int = regVX(y)
-        val addition:Int = regX + regY
-        regVX(x) = addition
-        regVX(0xF) = if (addition > 255) 1 else 0
-
-      case v if (v & 0xF00F) == 0x8005 =>
-        // Set Vx = Vx - Vy, set VF = NOT borrow
-        val (x, y) = getXandY(v)
-        regVX(0xF) = if (regVX(x) > regVX(y)) 1 else 0
-        val regX:Int = regVX(x)
-        val regY:Int = regVX(y)
-        val subtraction:Int = regX - regY
-        regVX(x) = subtraction
-
-      case v if (v & 0xF00F) == 0x8006 =>
-        // Set Vx = Vx SHR 1
-        val (x, _) = getXandY(v)
-        regVX(0xF) = if ((regVX(x) & 0x1) == 1) 1 else 0
-        regVX(x) = regVX(x) >>> 1
-
-      case v if (v & 0xF00F) == 0x8007 =>
-        // Set Vx = Vy - Vx, set VF = NOT borrow
-        val (x, y) = getXandY(v)
-        regVX(0xF) = if (regVX(y) > regVX(x)) 1 else 0
-        regVX(x) = regVX(y) - regVX(x)
-
-      case v if (v & 0xF00F) == 0x800E =>
-        // Set Vx = Vx SHL 1
-        val (x, y) = getXandY(v)
-        regVX(0xF) = if ((regVX(x) & 0x80) == 0x80) 1 else 0
-        regVX(x) = regVX(x) << 1
-
-      case v if (v & 0xF00F) == 0x9000 =>
-        // Skip next instruction if Vx != Vy
-        val (x, y) = getXandY(v)
-        if (regVX(x) != regVX(y)) regPC += 2
-
-      case v if (v & 0xF000) == 0x1000 =>
-        // Jump to location nnn
-        val valu = getNNN(v)
-        regPC = valu
-
-      case v if (v & 0xF000) == 0x2000 =>
-        // Call subroutine at nnn.
-        push(regPC)
-        regPC = getNNN(v)
-
-      case v if (v & 0xF000) == 0x3000 =>
-        // Skip next instruction if Vx = kk
-        val (x, kk) = getXandKK(v)
-        if (regVX(x) == kk) regPC = regPC + 2
-
-      case v if (v & 0xF000) == 0x4000 =>
-        // Skip next instruction if Vx != kk.
-        val (x, kk) = getXandKK(v)
-        if (regVX(x) != kk) regPC = regPC + 2
-
-      case v if (v & 0xF000) == 0x5000 =>
-        // Skip next instruction if Vx = Vy.
-        val (x, y) = getXandY(v)
-        if (regVX(x) == regVX(y)) regPC += 2
-
-      case v if (v & 0xF000) == 0x6000 =>
-        // Set Vx = kk.
-        val (x, kk) = getXandKK(v)
-        regVX(x) = kk
-
-      case v if (v & 0xF000) == 0x7000 =>
-        // Set Vx = Vx + kk
-        val (x, kk) = getXandKK(v)
-        regVX(x) = regVX(x) + kk
-
-      case v if (v & 0xF000) == 0xA000 =>
-        // I = nnn
-        regI = getNNN(v) & 0xFFF
-
-      case v if (v & 0xF000) == 0xB000 =>
-        // Jump to location nnn + V0
-        regPC = getNNN(v) + regVX(0)
-
-      case v if (v & 0xF000) == 0xC000 =>
-        // Set Vx = random byte AND kk
-        val (x, kk) = getXandKK(v)
-        regVX(x) = generateRandom() & kk
-
-      case v if (v & 0xF000) == 0xD000 =>
-        // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
-        val (x, y, n) = getXYN(v)
-        regVX(0xF) = if(memory.showSprite(n, regI, regVX(x), regVX(y))) 1 else 0
-        nSprites = nSprites + 1
-
-      case _ =>
-        println("Not implemented! " + instr)
+      finally fw.close()
     }
   }
 
-  var nSprites = 0
+  override def ret(): Unit = {
+    regPC = pop
+  }
+
+  override def cls(): Unit = {
+    memory.clearVideo()
+  }
+
+  override def scr(): Unit = {
+    // Scroll right 4 pixels (2 pixels in low res mode)
+    memory.scrollRight(if (memory.isHighRes()) 4 else 2)
+  }
+
+  override def scl(): Unit = {
+    // Scroll left 4 pixels (2 pixels in low res mode)
+    memory.scrollLeft(if (memory.isHighRes()) 4 else 2)
+  }
+
+  override def exit(): Unit = {
+    // Exit, infinite loop
+    regPC -= 2
+  }
+
+  override def high_res_on(enabled: Boolean): Unit = {
+    // Enter low/high resolution (64x32)/(128x64) mode
+    memory.setHighResolution(enabled)
+  }
+
+  override def scu_n(n: Int): Unit = {
+    // Scroll up N pixels (N/2 pixels in low res mode)
+    memory.scrollUp(if (memory.isHighRes()) n else n / 2)
+  }
+
+  override def scd_n(n: Int): Unit = {
+    // Scroll down N pixels (N/2 pixels in low res mode)
+    memory.scrollDown(if (memory.isHighRes()) n else n / 2)
+  }
+
+  override def skp_Vx(x: Int): Unit = {
+    // Skip next instruction if key with the value of Vx is pressed
+    if (controller.isKeyPressed(regVX(x))) regPC = regPC + 2
+  }
+
+  override def sknp_Vx(x: Int): Unit = {
+    // Skip next instruction if key with the value of Vx is not pressed
+    if (!controller.isKeyPressed(regVX(x))) {
+      regPC = regPC + 2
+    }
+  }
+
+  override def ld_Vx_DT(x: Int): Unit = {
+    // Set Vx = delay timer value
+    regVX(x) = regDelay.get() & 0xFF
+  }
+
+  override def ld_DT_Vx(x: Int): Unit = {
+    // Set delay timer = Vx
+    regDelay.set(byteToInt(regVX(x)))
+  }
+
+  override def ld_Vx_K(x: Int): Unit = {
+    // Wait for a key press, store the value of the key in Vx
+    if (!controller.isAnyKeyPressed()) regPC = regPC - 2
+    else regVX(x) = controller.getKeyPressed()
+  }
+
+  override def ld_ST_Vx(x: Int): Unit = {
+    // Set sound timer = Vx
+    regSound = regVX(x)
+  }
+
+  override def add_I_Vx(x: Int): Unit = {
+    // Set I = I + Vx
+    regI = regI + byteToShort(regVX(x))
+  }
+
+  override def ld_F_Vx_8_by_5(x: Int): Unit = {
+    // Set I = location of sprite for digit Vx
+    regI = byteToInt(regVX(x)) * 5
+  }
+
+  override def ld_F_Vx_8_by_10(x: Int): Unit = {
+    // Set I = location of sprite for digit Vx
+    regI = (byteToInt(regVX(x)) * 10) + 0x100
+  }
+
+  override def ld_B_Vx(x: Int): Unit = {
+    // Store BCD representation of Vx in memory locations I, I+1, and I+2
+    val hundreds = byteToInt(regVX(x)) / 100
+    val tenths = (byteToInt(regVX(x)) % 100) / 10
+    val units = (byteToInt(regVX(x)) % 100) % 10
+    memory.ramStartStoring(shortToInt(regI))
+    memory.ramStoreByte(hundreds)
+    memory.ramStoreByte(tenths)
+    memory.ramStoreByte(units)
+    memory.ramFinishStoring()
+  }
+
+  override def ld_I_Vx(x: Int): Unit = {
+    // Store registers V0 through Vx in memory starting at location I
+    memory.ramStartStoring(shortToInt(regI))
+    (0 to x).foreach { p => memory.ramStoreByte(regVX(p)) }
+    memory.ramFinishStoring()
+    regI += intToShort(x)
+  }
+
+  override def ld_Vx_I(x: Int): Unit = {
+    // Read registers V0 through Vx from memory starting at location I
+    (0 to x).foreach { p => regVX(p) = memory.ramReadByte(regI + p) }
+    regI += intToShort(x)
+  }
+
+  override def ld_r_Vx(x: Int): Unit = {
+    // Store V0..VX (inclusive) into HP-RPL user flags R0..RX (X < 8)
+    for (n <- 0 until x) {
+      regHPRPL(n) = regVX(n)
+    }
+  }
+
+  override def ld_Vx_r(x: Int): Unit = {
+    // Load V0..VX (inclusive) from HP-RPL user flags R0..RX (X < 8)
+    for (n <- 0 until x) {
+      regVX(n) = regHPRPL(n)
+    }
+  }
+
+  override def ld_Vx_Vy(xy: (Int, Int)): Unit = {
+    // Set Vx = Vy
+    regVX(xy._1) = regVX(xy._2)
+  }
+
+  override def or_Vx_Vy(xy: (Int, Int)): Unit = {
+    // Set Vx = Vx OR Vy
+    regVX(xy._1) = regVX(xy._1) | regVX(xy._2)
+  }
+
+  override def and_Vx_Vy(xy: (Int, Int)): Unit = {
+    // Set Vx = Vx AND Vy
+    regVX(xy._1) = regVX(xy._1) & regVX(xy._2)
+  }
+
+  override def xor_Vx_Vy(xy: (Int, Int)): Unit = {
+    // Set Vx = Vx XOR Vy
+    regVX(xy._1) = regVX(xy._1) ^ regVX(xy._2)
+  }
+
+  override def add_Vx_Vy(xy: (Int, Int)): Unit = {
+    // Vx = Vx + Vy, set VF = carry
+    val regX = byteToInt(regVX(xy._1))
+    val regY = byteToInt(regVX(xy._2))
+    val addition = regX + regY
+    regVX(xy._1) = addition
+    regVX(0xF) = if (addition > 255) 1 else 0
+  }
+
+  override def sub_Vx_Vy(xy: (Int, Int)): Unit = {
+    // Set Vx = Vx - Vy, set VF = NOT borrow
+    regVX(0xF) = if (regVX(xy._1) > regVX(xy._2)) 1 else 0
+    val regX = byteToInt(regVX(xy._1))
+    val regY = byteToInt(regVX(xy._2))
+    val subtraction = regX - regY
+    regVX(xy._1) = subtraction
+  }
+
+  override def sub_Vy_Vx(xy: (Int, Int)): Unit = {
+    // Set Vx = Vy - Vx, set VF = NOT borrow
+    regVX(0xF) = if (regVX(xy._2) > regVX(xy._1)) 1 else 0
+    regVX(xy._1) = regVX(xy._2) - regVX(xy._1)
+  }
+
+  override def shr_Vx(xy: (Int, Int)): Unit = {
+    // Set Vx = Vx SHR 1
+    regVX(0xF) = if ((regVX(xy._1) & 0x1) == 1) 1 else 0
+    regVX(xy._1) = regVX(xy._1) >>> 1
+  }
+
+  override def shl_Vx(xy: (Int, Int)): Unit = {
+    // Set Vx = Vx SHL 1
+    regVX(0xF) = if ((regVX(xy._1) & 0x80) == 0x80) 1 else 0
+    regVX(xy._1) = regVX(xy._1) << 1
+  }
+
+  override def sne_Vx_Vy(xy: (Int, Int)): Unit = {
+    // Skip next instruction if Vx != Vy
+    if (regVX(xy._1) != regVX(xy._2)) regPC += 2
+  }
+
+  override def se_Vx_Vy(xy: (Int, Int)): Unit = {
+    // Skip next instruction if Vx = Vy.
+    if (regVX(xy._1) == regVX(xy._2)) regPC += 2
+  }
+
+  override def jp_nnn(nnn: Short): Unit = {
+    // Jump to location nnn
+    regPC = nnn
+  }
+
+  override def call_nnn(nnn: Short): Unit = {
+    // Call subroutine at nnn.
+    push(regPC)
+    regPC = nnn
+  }
+
+  override def sne_Vx_kk(xkk: (Int, Int)): Unit = {
+    // Skip next instruction if Vx != kk.
+    if (regVX(xkk._1) != xkk._2) regPC = regPC + 2
+  }
+
+  override def se_Vx_kk(xkk: (Int, Int)): Unit = {
+    // Skip next instruction if Vx = kk
+    if (regVX(xkk._1) == xkk._2) regPC = regPC + 2
+  }
+
+  override def ld_Vx_kk(xkk: (Int, Int)): Unit = {
+    // Set Vx = kk.
+    regVX(xkk._1) = xkk._2
+  }
+
+  override def add_Vx_kk(xkk: (Int, Int)): Unit = {
+    // Set Vx = Vx + kk
+    regVX(xkk._1) = regVX(xkk._1) + xkk._2
+  }
+
+  override def ld_I_nnn(nnn: Short): Unit = {
+    // I = nnn
+    regI = nnn & 0xFFF
+  }
+
+  override def jp_V0_nnn(nnn: Short): Unit = {
+    // Jump to location nnn + V0
+    regPC = nnn + regVX(0)
+  }
+
+  override def rnd_Vx_kk(xkk: (Int, Int)): Unit = {
+    // Set Vx = random byte AND kk
+    regVX(byteToInt(xkk._1)) = generateRandom() & xkk._2
+  }
+
+  override def drw_Vx_Vy_n(xyn: (Int, Int, Int)): Unit = {
+    // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+    val xCoord:Int = byteToInt(regVX(xyn._1))
+    val yCoord:Int = byteToInt(regVX(xyn._2))
+
+    if (xyn._3 == 0 && memory.isHighRes()) {
+      regVX(0xF) = if(memory.showSprite16(shortToInt(regI), xCoord, yCoord)) 1 else 0
+    } else {
+      regVX(0xF) = if(memory.showSprite(xyn._3, shortToInt(regI), xCoord, yCoord)) 1 else 0
+    }
+  }
+
+  override def unimplemented: Unit = {
+    throw new RuntimeException("Unimplemented")
+  }
 }

@@ -21,8 +21,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 object Display {
   val PIXEL_SCALE_LOW_RES = 12
   val PIXEL_SCALE_HIGH_RES = 6
-  val BACKGROUND_COLOR = Color.BLACK
-  val PIXEL_COLOR = new Color(50, 0, 255)
+  val BACKGROUND_COLOR = new Color(0x10, 0x18, 0x26)
+  val PIXEL_COLOR = new Color(0x72, 0xa8, 0xff)
   val REFRESH_RATE_HZ = 60
   val SLEEP_TIME_BETWEEN_RENDERS_MS = 1000 / REFRESH_RATE_HZ
 }

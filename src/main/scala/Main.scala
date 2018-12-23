@@ -30,15 +30,31 @@ object Implicits {
     (i & 0xFF).toByte
   }
 
+  implicit def shortToInt(i: Short): Int = {
+    i & 0xFFFF
+  }
+
   implicit def byteToShort(i: Byte): Short = {
-    (i.toShort & 0xFF).toShort
+    i & 0xFF
+  }
+
+  implicit def byteToInt(i: Byte): Int = {
+    i.toInt & 0x00FF
+  }
+
+  implicit def bytesToInts(p: (Byte, Byte)): (Int, Int) = {
+    (p._1.toInt & 0x00FF, p._2.toInt & 0x00FF)
+  }
+
+  implicit def bytesToInts(p: (Byte, Byte, Byte)): (Int, Int, Int) = {
+    (p._1.toInt & 0x00FF, p._2.toInt & 0x00FF, p._3.toInt & 0x00FF)
   }
 }
 
 object EmulatorParameters {
-  val CPU_FREQUENCY_HZ = 1000
-  val NAME = "Chip8 Emulator"
-  val DEBUG_CPU = false
+  val CPU_FREQUENCY_HZ = 1000.00
+  val NAME = "SuperCHIP Emulator"
+  val DEBUG_CPU = true
 }
 
 object Main extends App {
@@ -75,6 +91,10 @@ object Main extends App {
       0
   }
 
+  val disasm = new Disassembler(memory, "disassemble.txt")
+  disasm.disassemble()
+  System.exit(0)
+
   println("Loaded " + programName + " : " + programSize + " bytes" )
   val controller = new Controller
   val display = new Display(memory, controller)
@@ -98,8 +118,11 @@ object Main extends App {
   display.start()
 
   while(display.isRunning()) {
-    cpu.execute(cpu.fetch)
-    Thread.sleep(1000/EmulatorParameters.CPU_FREQUENCY_HZ)
+    val instruction = cpu.fetch
+    cpu.execute(instruction)
+    val sleepMs:Double = 1000/EmulatorParameters.CPU_FREQUENCY_HZ
+    val sleepNano = (sleepMs * 1000).toInt
+    Thread.sleep(0, sleepNano)
   }
 
   delayThread.interrupt()

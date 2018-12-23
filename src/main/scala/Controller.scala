@@ -14,6 +14,7 @@
 */
 
 import java.util.NoSuchElementException
+import Implicits._
 
 class Controller() {
   val keys = Array.ofDim[Boolean](16)
@@ -48,12 +49,12 @@ class Controller() {
     }
   }
 
-  def isKeyPressed(key: Int): Boolean = {
-    keys(key)
+  def isKeyPressed(key: Byte): Boolean = {
+    keys(byteToInt(key))
   }
 
-  def getKeyPressed() : Int = {
-    keys.indexWhere(_ == true)
+  def getKeyPressed() : Byte = {
+    intToByte(keys.indexWhere(_ == true))
   }
 }
 
