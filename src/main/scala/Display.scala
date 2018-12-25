@@ -1,5 +1,5 @@
 /*
-  Chip8 Emulator.
+  SuperChip Emulator.
 
   Copyright (C) 2018 Francesco Rigoni - francesco.rigoni@gmail.com
   This program is free software: you can redistribute it and/or modify
@@ -19,8 +19,8 @@ import java.awt.event.{KeyEvent, KeyListener, WindowEvent, WindowListener}
 import java.util.concurrent.atomic.AtomicBoolean
 
 object Display {
-  val PIXEL_SCALE_LOW_RES = 12
-  val PIXEL_SCALE_HIGH_RES = 6
+  val PIXEL_SCALE_LOW_RES = 20
+  val PIXEL_SCALE_HIGH_RES = 10
   val BACKGROUND_COLOR = new Color(0x10, 0x18, 0x26)
   val PIXEL_COLOR = new Color(0x72, 0xa8, 0xff)
   val REFRESH_RATE_HZ = 60

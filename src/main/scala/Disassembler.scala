@@ -3,7 +3,7 @@ import java.io.FileWriter
 import scala.collection.mutable
 
 /*
-  Chip8 Emulator.
+  SuperChip Emulator.
 
   Copyright (C) 2018 Francesco Rigoni - francesco.rigoni@gmail.com
   This program is free software: you can redistribute it and/or modify

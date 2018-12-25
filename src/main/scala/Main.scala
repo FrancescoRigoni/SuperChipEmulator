@@ -1,5 +1,5 @@
 /*
-  Chip8 Emulator.
+  SuperChip Emulator.
 
   Copyright (C) 2018 Francesco Rigoni - francesco.rigoni@gmail.com
   This program is free software: you can redistribute it and/or modify
@@ -54,7 +54,7 @@ object Implicits {
 object EmulatorParameters {
   val CPU_FREQUENCY_HZ = 1000.00
   val NAME = "SuperCHIP Emulator"
-  val DEBUG_CPU = true
+  val DEBUG_CPU = false
 }
 
 object Main extends App {
@@ -91,42 +91,12 @@ object Main extends App {
       0
   }
 
-  val disasm = new Disassembler(memory, "disassemble.txt")
-  disasm.disassemble()
-  System.exit(0)
+//  val disasm = new Disassembler(memory, "disassemble.txt")
+//  disasm.disassemble()
+//  System.exit(0)
 
   println("Loaded " + programName + " : " + programSize + " bytes" )
-  val controller = new Controller
-  val display = new Display(memory, controller)
-  val cpu = new Cpu(memory, controller)
-
-  var lastDelayDecrement = System.currentTimeMillis()
-  val delayThread = new Thread {
-    override def run(): Unit = {
-      while(!isInterrupted) {
-        val elapsed = System.currentTimeMillis() - lastDelayDecrement
-        // Roughly 60 Hz
-        if (elapsed >= 16) {
-          cpu.decrementDelay
-          lastDelayDecrement = System.currentTimeMillis()
-        }
-      }
-    }
-  }
-
-  delayThread.start()
-  display.start()
-
-  while(display.isRunning()) {
-    val instruction = cpu.fetch
-    cpu.execute(instruction)
-    val sleepMs:Double = 1000/EmulatorParameters.CPU_FREQUENCY_HZ
-    val sleepNano = (sleepMs * 1000).toInt
-    Thread.sleep(0, sleepNano)
-  }
-
-  delayThread.interrupt()
-  delayThread.join()
+  new Emulator(memory).start()
 
   println("Finished")
   System.exit(0)

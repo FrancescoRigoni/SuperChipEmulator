@@ -1,4 +1,19 @@
 
+/*
+  SuperChip Emulator.
+
+  Copyright (C) 2018 Francesco Rigoni - francesco.rigoni@gmail.com
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License v3 as published by
+  the Free Software Foundation.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 import Implicits._
 
 trait InstructionDecode {
@@ -70,14 +85,14 @@ trait InstructionDecode {
       case v if (v & 0xF00F) == 0x9000 => sne_Vx_Vy(bytesToInts(getXandY(v)))
       case v if (v & 0xF000) == 0x1000 => jp_nnn(getNNN(v))
       case v if (v & 0xF000) == 0x2000 => call_nnn(getNNN(v))
-      case v if (v & 0xF000) == 0x3000 => se_Vx_kk(getXandKK(v))
-      case v if (v & 0xF000) == 0x4000 => sne_Vx_kk(getXandKK(v))
+      case v if (v & 0xF000) == 0x3000 => se_Vx_kk(bytesToInts(getXandKK(v)))
+      case v if (v & 0xF000) == 0x4000 => sne_Vx_kk(bytesToInts(getXandKK(v)))
       case v if (v & 0xF000) == 0x5000 => se_Vx_Vy(bytesToInts(getXandY(v)))
       case v if (v & 0xF000) == 0x6000 => ld_Vx_kk(getXandKK(v))
       case v if (v & 0xF000) == 0x7000 => add_Vx_kk(getXandKK(v))
       case v if (v & 0xF000) == 0xA000 => ld_I_nnn(getNNN(v))
       case v if (v & 0xF000) == 0xB000 => jp_V0_nnn(getNNN(v))
-      case v if (v & 0xF000) == 0xC000 => rnd_Vx_kk(getXandKK(v))
+      case v if (v & 0xF000) == 0xC000 => rnd_Vx_kk(bytesToInts(getXandKK(v)))
       case v if (v & 0xF000) == 0xD000 => drw_Vx_Vy_n(bytesToInts(getXYN(v)))
       case _ => unimplemented
     }

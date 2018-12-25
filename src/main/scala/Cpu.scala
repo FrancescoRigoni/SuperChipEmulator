@@ -1,6 +1,6 @@
 
 /*
-  Chip8 Emulator.
+  SuperChip Emulator.
 
   Copyright (C) 2018 Francesco Rigoni - francesco.rigoni@gmail.com
   This program is free software: you can redistribute it and/or modify
@@ -58,16 +58,12 @@ class Cpu(private val memory: Memory, private val controller: Controller) extend
 
     // DEBUG LOGS
     if (EmulatorParameters.DEBUG_CPU) {
-      val fw = new FileWriter("mine.txt", true)
-      try {
-        fw.write("Executing " + f"$instr%X" + " at " + regPC + " ")
-        fw.write("I: " + regI + " R: [")
-        for (reg <- regVX) {
-          fw.write(" " + reg)
-        }
-        fw.write("]\n")
+      print("Executing " + f"$instr%X" + " at " + (regPC-2) + " ")
+      print("I: " + regI + " R: [")
+      for (reg <- regVX) {
+        print(" " + reg)
       }
-      finally fw.close()
+      println("]")
     }
   }
 
@@ -116,14 +112,12 @@ class Cpu(private val memory: Memory, private val controller: Controller) extend
 
   override def sknp_Vx(x: Int): Unit = {
     // Skip next instruction if key with the value of Vx is not pressed
-    if (!controller.isKeyPressed(regVX(x))) {
-      regPC = regPC + 2
-    }
+    if (!controller.isKeyPressed(regVX(x))) regPC = regPC + 2
   }
 
   override def ld_Vx_DT(x: Int): Unit = {
     // Set Vx = delay timer value
-    regVX(x) = regDelay.get() & 0xFF
+    regVX(x) = intToByte(regDelay.get())
   }
 
   override def ld_DT_Vx(x: Int): Unit = {
@@ -149,12 +143,12 @@ class Cpu(private val memory: Memory, private val controller: Controller) extend
 
   override def ld_F_Vx_8_by_5(x: Int): Unit = {
     // Set I = location of sprite for digit Vx
-    regI = byteToInt(regVX(x)) * 5
+    regI = byteToShort(regVX(x)) * 5
   }
 
   override def ld_F_Vx_8_by_10(x: Int): Unit = {
     // Set I = location of sprite for digit Vx
-    regI = (byteToInt(regVX(x)) * 10) + 0x100
+    regI = (byteToShort(regVX(x)) * 10) + 0x100
   }
 
   override def ld_B_Vx(x: Int): Unit = {
@@ -174,13 +168,17 @@ class Cpu(private val memory: Memory, private val controller: Controller) extend
     memory.ramStartStoring(shortToInt(regI))
     (0 to x).foreach { p => memory.ramStoreByte(regVX(p)) }
     memory.ramFinishStoring()
-    regI += intToShort(x)
+    if (Quirks.increment_I) {
+      regI += intToShort(x)
+    }
   }
 
   override def ld_Vx_I(x: Int): Unit = {
     // Read registers V0 through Vx from memory starting at location I
     (0 to x).foreach { p => regVX(p) = memory.ramReadByte(regI + p) }
-    regI += intToShort(x)
+    if (Quirks.increment_I) {
+      regI += intToShort(x)
+    }
   }
 
   override def ld_r_Vx(x: Int): Unit = {
@@ -222,7 +220,7 @@ class Cpu(private val memory: Memory, private val controller: Controller) extend
     val regX = byteToInt(regVX(xy._1))
     val regY = byteToInt(regVX(xy._2))
     val addition = regX + regY
-    regVX(xy._1) = addition
+    regVX(xy._1) = intToByte(addition)
     regVX(0xF) = if (addition > 255) 1 else 0
   }
 
@@ -243,14 +241,24 @@ class Cpu(private val memory: Memory, private val controller: Controller) extend
 
   override def shr_Vx(xy: (Int, Int)): Unit = {
     // Set Vx = Vx SHR 1
-    regVX(0xF) = if ((regVX(xy._1) & 0x1) == 1) 1 else 0
-    regVX(xy._1) = regVX(xy._1) >>> 1
+    if (Quirks.shift_vY) {
+      regVX(0xF) = if ((regVX(xy._2) & 0x1) == 1) 1 else 0
+      regVX(xy._1) = intToByte(regVX(xy._2) >>> 1)
+    } else {
+      regVX(0xF) = if ((regVX(xy._1) & 0x1) == 1) 1 else 0
+      regVX(xy._1) = intToByte(regVX(xy._1) >>> 1)
+    }
   }
 
   override def shl_Vx(xy: (Int, Int)): Unit = {
     // Set Vx = Vx SHL 1
-    regVX(0xF) = if ((regVX(xy._1) & 0x80) == 0x80) 1 else 0
-    regVX(xy._1) = regVX(xy._1) << 1
+    if (Quirks.shift_vY) {
+      regVX(0xF) = if ((regVX(xy._2) & 0x80) == 0x80) 1 else 0
+      regVX(xy._1) = intToByte(regVX(xy._2) << 1)
+    } else {
+      regVX(0xF) = if ((regVX(xy._1) & 0x80) == 0x80) 1 else 0
+      regVX(xy._1) = intToByte(regVX(xy._1) << 1)
+    }
   }
 
   override def sne_Vx_Vy(xy: (Int, Int)): Unit = {
@@ -276,22 +284,22 @@ class Cpu(private val memory: Memory, private val controller: Controller) extend
 
   override def sne_Vx_kk(xkk: (Int, Int)): Unit = {
     // Skip next instruction if Vx != kk.
-    if (regVX(xkk._1) != xkk._2) regPC = regPC + 2
+    if (byteToInt(regVX(xkk._1)) != xkk._2) regPC = regPC + 2
   }
 
   override def se_Vx_kk(xkk: (Int, Int)): Unit = {
     // Skip next instruction if Vx = kk
-    if (regVX(xkk._1) == xkk._2) regPC = regPC + 2
+    if (byteToInt(regVX(xkk._1)) == xkk._2) regPC = regPC + 2
   }
 
   override def ld_Vx_kk(xkk: (Int, Int)): Unit = {
     // Set Vx = kk.
-    regVX(xkk._1) = xkk._2
+    regVX(xkk._1) = intToByte(xkk._2)
   }
 
   override def add_Vx_kk(xkk: (Int, Int)): Unit = {
     // Set Vx = Vx + kk
-    regVX(xkk._1) = regVX(xkk._1) + xkk._2
+    regVX(xkk._1) = intToByte(byteToInt(regVX(xkk._1)) + xkk._2)
   }
 
   override def ld_I_nnn(nnn: Short): Unit = {

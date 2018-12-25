@@ -1,5 +1,5 @@
 /*
-  Chip8 Emulator.
+  SuperChip Emulator.
 
   Copyright (C) 2018 Francesco Rigoni - francesco.rigoni@gmail.com
   This program is free software: you can redistribute it and/or modify
@@ -152,9 +152,6 @@ class Memory {
   }
 
   def showSprite16(fromAddress: Int, xCoord: Int, yCoord: Int) : Boolean = synchronized {
-    // println("Draw sprite at " + xCoord + ":" + yCoord + " fromMem: " + fromAddress + " size: " + height)
-    var collisions = showSprite(16, fromAddress, xCoord, yCoord, 2) |
-                     showSprite(16, fromAddress+1, xCoord+8, yCoord, 2)
-    collisions
+    showSprite(16, fromAddress, xCoord, yCoord, 2) | showSprite(16, fromAddress+1, xCoord+8, yCoord, 2)
   }
 }
