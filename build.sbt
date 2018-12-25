@@ -12,7 +12,7 @@ scalaVersion := "2.12.7"
 
 // It's possible to define many kinds of settings, such as:
 
-name := "hello-world"
+name := "superchip-emulator"
 organization := "ch.epfl.scala"
 version := "1.0"
 
