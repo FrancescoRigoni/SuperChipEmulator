@@ -91,10 +91,6 @@ object Main extends App {
       0
   }
 
-//  val disasm = new Disassembler(memory, "disassemble.txt")
-//  disasm.disassemble()
-//  System.exit(0)
-
   println("Loaded " + programName + " : " + programSize + " bytes" )
   new Emulator(memory).start()
 
